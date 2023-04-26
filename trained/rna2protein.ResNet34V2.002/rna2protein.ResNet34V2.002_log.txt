@@ -1,0 +1,186 @@
+script_start::2023.02.07.08.09.17
+successfully created gpu array -> using gpu
+finetune from 14!
+10377 genes2train
+2480 genes2val
+503055 epxs in data
+batch shape::(1, 10, 2048, 21)
+[Epoch::000] GPU::0 bs::150 lr(0)::0.0000184811 
+|-------------------------------------
+|  (val)::P^2_metric::0.095045 
+|  (val)::P^2_norm_metric::0.571757 
+|  (val)::MSE_metric::1.007452 
+|  (val)::RMSE_denorm_metric::270.095764 
+|  (val)::RMSE_norm_metric::1.003719 
+|-------------------------------------
+|  (train)::P^2_metric::0.419262 
+|  (train)::P^2_norm_metric::0.790830 
+|  (train)::MSE_metric::0.494928 
+|  (train)::RMSE_denorm_metric::164.688660 
+|  (train)::RMSE_norm_metric::0.703511 
+|  (train)::MSE_loss::0.245999
+|-------------------------------------
+
+==================================================
+[Epoch::001] GPU::0 bs::150 lr(1)::0.0000410225 
+|-------------------------------------
+|  (val)::P^2_metric::0.100534 
+|  (val)::P^2_norm_metric::0.569173 
+|  (val)::MSE_metric::1.019008 
+|  (val)::RMSE_denorm_metric::270.134613 
+|  (val)::RMSE_norm_metric::1.009459 
+|-------------------------------------
+|  (train)::P^2_metric::0.439827 
+|  (train)::P^2_norm_metric::0.799969 
+|  (train)::MSE_metric::0.473168 
+|  (train)::RMSE_denorm_metric::161.876251 
+|  (train)::RMSE_norm_metric::0.687872 
+|  (train)::MSE_loss::0.236641
+|-------------------------------------
+
+best val was at epoch(0)::0.571757
+==================================================
+[Epoch::002] GPU::0 bs::150 lr(2)::0.0000347794 
+|-------------------------------------
+|  (val)::P^2_metric::0.108851 
+|  (val)::P^2_norm_metric::0.571180 
+|  (val)::MSE_metric::1.007332 
+|  (val)::RMSE_denorm_metric::268.216003 
+|  (val)::RMSE_norm_metric::1.003659 
+|-------------------------------------
+|  (train)::P^2_metric::0.450802 
+|  (train)::P^2_norm_metric::0.804932 
+|  (train)::MSE_metric::0.461428 
+|  (train)::RMSE_denorm_metric::160.034134 
+|  (train)::RMSE_norm_metric::0.679285 
+|  (train)::MSE_loss::0.231581
+|-------------------------------------
+
+best val was at epoch(0)::0.571757
+==================================================
+[Epoch::003] GPU::0 bs::150 lr(3)::0.0000003892 
+|-------------------------------------
+|  (val)::P^2_metric::0.088871 
+|  (val)::P^2_norm_metric::0.568749 
+|  (val)::MSE_metric::1.016549 
+|  (val)::RMSE_denorm_metric::270.341858 
+|  (val)::RMSE_norm_metric::1.008240 
+|-------------------------------------
+|  (train)::P^2_metric::0.468641 
+|  (train)::P^2_norm_metric::0.809856 
+|  (train)::MSE_metric::0.449652 
+|  (train)::RMSE_denorm_metric::158.116272 
+|  (train)::RMSE_norm_metric::0.670561 
+|  (train)::MSE_loss::0.227069
+|-------------------------------------
+
+best val was at epoch(0)::0.571757
+==================================================
+[Epoch::004] GPU::0 bs::150 lr(5)::0.0000471033 
+|-------------------------------------
+|  (val)::P^2_metric::0.094378 
+|  (val)::P^2_norm_metric::0.573740 
+|  (val)::MSE_metric::1.006440 
+|  (val)::RMSE_denorm_metric::270.979034 
+|  (val)::RMSE_norm_metric::1.003215 
+|-------------------------------------
+|  (train)::P^2_metric::0.460799 
+|  (train)::P^2_norm_metric::0.810194 
+|  (train)::MSE_metric::0.448801 
+|  (train)::RMSE_denorm_metric::159.073380 
+|  (train)::RMSE_norm_metric::0.669926 
+|  (train)::MSE_loss::0.226941
+|-------------------------------------
+
+new best val!::0.573740
+==================================================
+[Epoch::005] GPU::0 bs::150 lr(8)::0.0000253697 
+|-------------------------------------
+|  (val)::P^2_metric::0.107948 
+|  (val)::P^2_norm_metric::0.570971 
+|  (val)::MSE_metric::1.014146 
+|  (val)::RMSE_denorm_metric::269.701904 
+|  (val)::RMSE_norm_metric::1.007048 
+|-------------------------------------
+|  (train)::P^2_metric::0.465356 
+|  (train)::P^2_norm_metric::0.816689 
+|  (train)::MSE_metric::0.433384 
+|  (train)::RMSE_denorm_metric::157.801498 
+|  (train)::RMSE_norm_metric::0.658319 
+|  (train)::MSE_loss::0.220245
+|-------------------------------------
+
+best val was at epoch(4)::0.573740
+==================================================
+[Epoch::006] GPU::0 bs::150 lr(13)::0.0000090956 
+|-------------------------------------
+|  (val)::P^2_metric::0.094725 
+|  (val)::P^2_norm_metric::0.568637 
+|  (val)::MSE_metric::1.024081 
+|  (val)::RMSE_denorm_metric::270.055573 
+|  (val)::RMSE_norm_metric::1.011969 
+|-------------------------------------
+|  (train)::P^2_metric::0.472150 
+|  (train)::P^2_norm_metric::0.819263 
+|  (train)::MSE_metric::0.427239 
+|  (train)::RMSE_denorm_metric::156.846344 
+|  (train)::RMSE_norm_metric::0.653635 
+|  (train)::MSE_loss::0.217737
+|-------------------------------------
+
+best val was at epoch(4)::0.573740
+==================================================
+[Epoch::007] GPU::0 bs::150 lr(48)::0.0000225183 
+|-------------------------------------
+|  (val)::P^2_metric::0.101742 
+|  (val)::P^2_norm_metric::0.567315 
+|  (val)::MSE_metric::1.031671 
+|  (val)::RMSE_denorm_metric::268.368744 
+|  (val)::RMSE_norm_metric::1.015712 
+|-------------------------------------
+|  (train)::P^2_metric::0.500194 
+|  (train)::P^2_norm_metric::0.831835 
+|  (train)::MSE_metric::0.397325 
+|  (train)::RMSE_denorm_metric::152.301498 
+|  (train)::RMSE_norm_metric::0.630337 
+|  (train)::MSE_loss::0.203853
+|-------------------------------------
+
+best val was at epoch(4)::0.573740
+==================================================
+[Epoch::008] GPU::0 bs::150 lr(1)::0.0000207008 
+|-------------------------------------
+|  (val)::P^2_metric::0.096044 
+|  (val)::P^2_norm_metric::0.568882 
+|  (val)::MSE_metric::1.019074 
+|  (val)::RMSE_denorm_metric::270.102356 
+|  (val)::RMSE_norm_metric::1.009492 
+|-------------------------------------
+|  (train)::P^2_metric::0.508629 
+|  (train)::P^2_norm_metric::0.834225 
+|  (train)::MSE_metric::0.391676 
+|  (train)::RMSE_denorm_metric::151.145584 
+|  (train)::RMSE_norm_metric::0.625840 
+|  (train)::MSE_loss::0.201238
+|-------------------------------------
+
+best val was at epoch(4)::0.573740
+==================================================
+[Epoch::009] GPU::0 bs::150 lr(1)::0.0000003540 
+|-------------------------------------
+|  (val)::P^2_metric::0.100872 
+|  (val)::P^2_norm_metric::0.568396 
+|  (val)::MSE_metric::1.020000 
+|  (val)::RMSE_denorm_metric::269.054413 
+|  (val)::RMSE_norm_metric::1.009951 
+|-------------------------------------
+|  (train)::P^2_metric::0.485061 
+|  (train)::P^2_norm_metric::0.816682 
+|  (train)::MSE_metric::0.433420 
+|  (train)::RMSE_denorm_metric::155.258820 
+|  (train)::RMSE_norm_metric::0.658346 
+|  (train)::MSE_loss::0.221183
+|-------------------------------------
+
+best val was at epoch(4)::0.573740
+==================================================

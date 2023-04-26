@@ -1,0 +1,21 @@
+isdebug: 0
+# # nci
+# metric_files: [
+#   # trained/rna2protein_nci60.002/out/metrics.txt,
+#   trained/rna2protein_nci60.ResNet34V2.001/out/metrics.txt,
+#   # trained/rna2protein_nci60.ResNet50V2.001/out/metrics.txt,
+# ]
+# tissue29
+metric_files: [
+  # trained/rna2protein_expression_regressor.033/out/metrics.txt,
+  trained/rna2protein_tissue29.ResNet34V2.001/out/metrics.txt,
+  # trained/rna2protein_tissue29.ResNet50V2.001/out/metrics.txt
+]
+select_genes: False
+changeNegativeProts2Zero: False
+use_norm: True
+use_half: 0
+writeCSV: True
+drawDatasetsGT2predictedHeatmap: False
+drawDatasetsViolin: False
+drawGenesGT2predictedViolin: False

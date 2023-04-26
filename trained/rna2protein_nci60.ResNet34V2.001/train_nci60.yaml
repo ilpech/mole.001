@@ -1,0 +1,100 @@
+# use false to disable setting
+data:
+  cashPath: ./bio_dl/cash/dataloader
+  datasets2use:
+    # tissue29: True
+    # tissue13: True
+    nci60: True
+    tissue29: False
+    tissue13: False
+    # nci60: False
+  tissue29_rna: ./bio_dl/testdata/tissue29_rna.tsv
+  tissue29_prot: ./bio_dl/testdata/tissue29_prot.tsv
+  tissue13_rna: ./bio_dl/testdata/tissue13_rna.tsv
+  tissue13_prot: ./bio_dl/testdata/tissue13_prot.tsv
+  nci60_rna: ./bio_dl/testdata/nci60_rna.tsv
+  nci60_prot: ./bio_dl/testdata/nci60_prot.tsv
+  geneMapping: ./bio_dl/testdata/human_ids_mapping.tab
+  engs2uniprot_file: ./bio_dl/testdata/mapping_out/engs2uniprot_human.txt
+  skipMissing: False
+  splitGeneFromModelConfig: ./bio_dl/testdata/prot_abundance_regressor.full_tissue29_.2_val_config_NONORM.json
+  # splitGeneFromModelConfig: False
+  # ifSplitPercentToTrain: 0.8 
+  ifSplitPercentToTrain: False
+  useZeroProt: False
+train:
+  params_dir: ./trained
+  max_var_layer: 2048
+  gpus2use: 2
+  each_train_has_own_dataset: False
+  net_name: rna2protein_nci60.ResNet34V2.001
+  finetune_net_name: rna2protein_expression_regressor.030
+  finetune_params_dir: /home/ilpech/repositories/machine_learning/trained
+  epoch_start_from: 0
+  epochs: 900
+  log_interval: 3
+  metric_flush_interval: 500
+  # metric_flush_interval: 1
+  wd: 0.0001
+  momentum: 0.9
+  optimizer: sgd
+  lr:
+    mode: [
+      # byHand,
+      # byPlateu,
+      cosineWarmup
+    ]
+    metric2use: [
+      norm_p2_val,
+      # denorm_p2_val,
+    ]
+    byHand:
+      0: 0.03
+      1: 0.01
+      3: 0.003
+      5: 0.001
+      7: 0.0003
+    byPlateu:
+      mode: max
+      start_value: 0.003
+      factor: 0.3
+      # number of epochs with no improvement 
+      # after which learning rate will be reduced
+      patience: 1
+      threshold: 0.05
+      # number of epochs to wait before 
+      # resuming normal operation after lr has been reduced
+      cooldown: 2
+      min_lr: 0.000001 
+    cosineWarmup:
+      max_lr: 0.0003
+      min_lr: 0.0000001
+      warmup_steps: 250
+      first_cycle_steps: 500
+      cycle_mult: 1.0
+      # decrease max learning rate by cycle
+      gamma: 0.8
+      
+  batch_size:
+    0: 150
+  augm:
+    isEnabled: True
+    epoch_p:
+      0: 0.99
+      10: 0.8
+model:
+    model2use: [
+      # wideResNet,
+      ResNetV2
+    ]
+    wideResNet:
+      num_layers: 34
+      width_factor: 3
+    ResNetV2:
+      num_layers: 34
+      width_factor: 1
+    # ResNetV2:
+    #   num_layers: 50
+    #   width_factor: 1
+
+  
