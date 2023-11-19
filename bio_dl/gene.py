@@ -63,17 +63,17 @@ class Gene:
             'S', 'T', 'U', 'V', 'W', 'Y'
         ])
     
-    def apiData(self):
-        return getGeneFromApi(self.id())
+    def apiData(self, outdir):
+        return getGeneFromApi(self.id(), outdir)
     
-    def apiSequence(self):
-        return sequence(self.id())
+    def apiSequence(self, outdir):
+        return sequence(self.id(), outdir)
     
-    def apiSeqOneHot(self):
+    def apiSeqOneHot(self, outdir):
         """
         One hot coding of aminoacids sequence
         """
-        return Gene.seq2oneHot(self.apiSequence())
+        return Gene.seq2oneHot(self.apiSequence(outdir))
     
     @staticmethod
     def seq2oneHot(seq):

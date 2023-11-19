@@ -292,8 +292,8 @@ class DistGeneExpressionTrainer:
         max_eps = data_loader.maxProteinMeasurementsInData()
         
         data_cnt = len(data_loader)
-        # L = torch.nn.MSELoss()
-        L = torch.nn.SmoothL1Loss(beta=0.5)
+        L = torch.nn.MSELoss()
+        # L = torch.nn.SmoothL1Loss(beta=0.5)
         # L = torch.nn.HuberLoss(delta=0.5)
         scheduler = None
         if self.lr_mode == 'byhand':
@@ -469,11 +469,12 @@ class DistGeneExpressionTrainer:
                         scheduler_step += 1
                         try:
                             scheduler.step(scheduler_step)
+                            # scheduler.step(passed)
                         except ValueError:
                             logger.print(
                                 'cosine value error on {} step'.format(scheduler_step)
                             )
-                            scheduler_step = 0
+                            scheduler_step = int(scheduler_step/2)
                     self.current_lr = scheduler.get_lr()[0]
                     lr_scheduler_step = scheduler.cycle
                 sys.stdout.flush()

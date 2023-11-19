@@ -60,6 +60,7 @@ class DistGeneDataLoader(Dataset):
         self.config_data = self.config['data']
         self.config_train = self.config['train']
         self.cash_path = self.config_data['cashPath']
+        self.apiUniprotOutDir = self.config_data['apiUniprotOutDir']
         self.gene2sample_cash_path = None
         if self.cash_path != 'False':
             self.gene2sample_cash_path = os.path.join(
@@ -570,7 +571,7 @@ class DistGeneDataLoader(Dataset):
         # 3-rd channel: filled with normed RNA experiment abundance
         batch[2].fill(norm_rna_value)
         # 4-nd channel: filled by gene aminoacids seq in onehot representation
-        gene_seq_onehot = gene.apiSeqOneHot()
+        gene_seq_onehot = gene.apiSeqOneHot(self.apiUniprotOutDir)
         if gene_seq_onehot is not None and len(gene_seq_onehot):
             onehot_rows = gene_seq_onehot.shape[0]
             if onehot_rows > variable_length_layer_size:
