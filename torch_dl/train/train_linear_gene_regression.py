@@ -481,9 +481,9 @@ class DistGeneLinearExpressionTrainer:
                 #     data.float().cuda(gpu_id)
                 # )
                 annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, labels_gpu = (
-                    annotations.float().cuda(gpu_id)
-                    types_one_hot.float().cuda(gpu_id)
-                    norm_rna_vals.float().cuda(gpu_id)
+                    annotations.float().cuda(gpu_id),
+                    types_one_hot.float().cuda(gpu_id),
+                    norm_rna_vals.float().cuda(gpu_id),
                     labels.unsqueeze(1).float().cuda(gpu_id)
                 )
                 # out = model(data_gpu)
