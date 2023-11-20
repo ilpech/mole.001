@@ -87,7 +87,7 @@ def uniq_nonempty_uniprot_mapping_header():
         'RefSeq',
         'MIM',
         'PubMed',
-        'Ensembl_PRO',
+        # 'Ensembl_PRO',
         'PDB',
     ]
     
