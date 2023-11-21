@@ -268,7 +268,7 @@ class DistGeneExpressionTrainer:
         )
         logger.print('creating resnset regression model...'.format(gpu_id))
         model: TorchModel = self.create_model(
-            num_channels=10
+            num_channels=len(uniq_nonempty_uniprot_mapping_header()) + 4
         )
         inspect_model(
             model.model(),
