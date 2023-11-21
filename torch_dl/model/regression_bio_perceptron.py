@@ -6,21 +6,25 @@ from varname.helpers import debug
 class RegressionBioPerceptron(nn.Module):
     def __init__(
         self,
+        input_annotations_len,
+        input_type_len,
+        input_features_hidden_size,
         hidden_size, #80
         annotation_dropout, #0.25
         hidden_dropout
     ):
         super().__init__()
-        
-        self.input_features_hidden_size = int(hidden_size / 2)
+        self.input_annotations_len = input_annotations_len
+        self.input_type_len = input_type_len
+        self.input_features_hidden_size = input_features_hidden_size
         self.hidden_size = hidden_size
         self.annotation_dropout = annotation_dropout
         self.hidden_dropout = hidden_dropout
 
         self.annotations_dropout = nn.Dropout(p=self.annotation_dropout) #check value from paper
-        self.annotations_linear = nn.Linear(135967, self.input_features_hidden_size)
+        self.annotations_linear = nn.Linear(self.input_annotations_len, self.input_features_hidden_size)
         
-        self.type_ids_linear = nn.Linear(46, self.input_features_hidden_size)
+        self.type_ids_linear = nn.Linear(self.input_type_len, self.input_features_hidden_size)
         
         self.linear_layer = nn.Linear(
             self.hidden_size, 
@@ -53,11 +57,11 @@ class RegressionBioPerceptron(nn.Module):
         
         add_weight = self.add_weight_linear(x)
         mul_weight = self.mul_weight_linear(x)
-        debug(rna_tensor.shape)
-        debug(mul_weight.shape)
-        debug((rna_tensor*mul_weight).shape)
+        # debug(rna_tensor.shape)
+        # debug(mul_weight.shape)
+        # debug((rna_tensor*mul_weight).shape)
         result = (rna_tensor*mul_weight)+add_weight
-        debug(result.shape)
+        # debug(result.shape)
         return result
         
         

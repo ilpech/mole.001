@@ -48,7 +48,8 @@ class DistGeneDataLoader(Dataset):
         self, 
         config_path, 
         net_config_path=None,
-        use_net_experiments=True
+        use_net_experiments=True,
+        use_net_databases=True
     ):
         self.creation_time = curDateTime()
         self.config_path = config_path
@@ -56,6 +57,7 @@ class DistGeneDataLoader(Dataset):
            raise Exception('provide path to .yaml train config with data branch') 
         self.net_config_path = net_config_path
         self.use_net_experiments = use_net_experiments
+        self.use_net_databases = use_net_databases
         self.config = DistGeneDataLoader.opt_from_config(self.config_path)
         self.config_data = self.config['data']
         self.config_train = self.config['train']
@@ -86,6 +88,7 @@ class DistGeneDataLoader(Dataset):
         self._valexps2indxs: List = []
         self.genes_mapping_databases = uniprot_mapping_header()
         self.databases_alphs = {}
+        self.most_common_databases_alphs = None # added for linear models
         self.max_len_db_alph = self.max_var_layer * len(Gene.proteinAminoAcidsAlphabet())
         print('reading mapping', self.gene_mapping_path)
         self.mapping = mapping2dict(self.gene_mapping_path)
@@ -639,10 +642,11 @@ class DistGeneDataLoader(Dataset):
         """
         print(f'filling database alphabets with max {max_len_alph}...')
         cash_file = None
-        if cash_dir is not None:
+        if cash_dir is not None and self.use_net_databases:
             db_cash = find_files(cash_dir, '_databases_', abs_p=True)
             if len(db_cash):
                 cash_file = db_cash[0]
+                
         if cash_file:
             with open(cash_file, 'r') as f:
                 cash_data = json.load(f)
