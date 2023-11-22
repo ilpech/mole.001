@@ -73,7 +73,7 @@ cohortsToTrain:
       modelsInCohort: 5
     minEpochsToFinish: 3
   # # ==================================
-  # rna2protein_tissue29.BioPerceptrone.mole_c001:
+  # rna2protein_nci60.BioPerceptrone.mole_c001:
   #   baseConfigPath: config/gene_expression/train_linear_nci60.yaml
   #   cohortParamsDir: trained/cohorts
   #   crossValidation:
