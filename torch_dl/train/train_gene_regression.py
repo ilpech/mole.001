@@ -158,41 +158,6 @@ class DistGeneExpressionTrainer:
             elif dist.is_available() and self.gpus2use > 0:
                 print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
                 mp.spawn(self.train_loop, nprocs=self.gpus2use)
-        # if self.gpus2use > self.avail_gpus:
-        #     print('avail gpus {} less than gpus2use param from config {}'.
-        #     format(
-        #         self.avail_gpus, self.gpus2use
-        #         )
-        #     )
-        #     self.gpus2use = self.avail_gpus
-        # if torch.cuda.is_available():
-        #     self.ctx = 'gpu'
-        #     self.logger.print('successfully created gpu array -> using gpu')
-        #     self.dist_backend = self.dist_gpu_backend
-        # else:
-        #     self.ctx = 'cpu'
-        #     if self.isdebug:
-        #         self.logger.print('debug mode -> using cpu')
-        #     else:
-        #         self.logger.print('cannot create gpu array -> using cpu')
-        #         self.logger.print(
-        #             'Error! dist train can not work without gpu, use usual train instead'
-        #         )
-        #         exit()
-        # #=========DIST
-        # if dist.is_available() and self.gpus2use > 0:
-        #     if not self.isdebug:
-        #         mp.spawn(self.train_loop, nprocs=self.gpus2use)
-        # self.current_lr = None
-        # self.current_batch_size = None
-
-        # if force_run:
-        #     if self.gpus2use == 1 or self.isdebug:
-        #         self.train_loop()
-        #     # #=========DIST
-        #     elif dist.is_available() and self.gpus2use > 0:
-        #         print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
-        #         mp.spawn(self.train_loop, nprocs=self.gpus2use)
 
     @staticmethod
     def opt_from_config(config_path):

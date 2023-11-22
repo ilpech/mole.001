@@ -164,14 +164,14 @@ class DistGeneDataLoader(Dataset):
         if self.rnaMeasurementsAlphabet != self.proteinMeasurementsAlphabet:
             raise Exception('DistGeneDataLoader::rnaMeasurementsAlphabet = self.proteinMeasurementsAlphabet') 
         self._warmupExps()
-        debug(len(self._valexps2indxs))
-        debug(len(self._exps2indxs))
-        debug(self.rnaMeasurementsAlphabet)
-        debug(len(self.rnaMeasurementsAlphabet))
-        debug(self.proteinMeasurementsAlphabet)
-        debug(len(self.proteinMeasurementsAlphabet))
-        debug(self.maxProteinMeasurementInData())
-        debug(self.maxRNAMeasurementInData())
+        # debug(len(self._valexps2indxs))
+        # debug(len(self._exps2indxs))
+        # debug(self.rnaMeasurementsAlphabet)
+        # debug(len(self.rnaMeasurementsAlphabet))
+        # debug(self.proteinMeasurementsAlphabet)
+        # debug(len(self.proteinMeasurementsAlphabet))
+        # debug(self.maxProteinMeasurementInData())
+        # debug(self.maxRNAMeasurementInData())
         
     @staticmethod
     def createDistLoader(
@@ -258,6 +258,8 @@ class DistGeneDataLoader(Dataset):
             to_train = False
             if gene_uid not in self.genes2train and gene_uid not in self.genes2val: 
                 continue
+            if gene_uid in self.genes2train:
+                to_train = True
             for rna_exp, value in gene.rna_measurements.items():
                 if value == 0.:
                     continue
