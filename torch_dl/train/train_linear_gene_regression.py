@@ -48,6 +48,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import warnings
 
+from torch_dl.train.train_gene_regression import DistGeneExpressionTrainer
+
 torch.cuda.empty_cache()
 
 class DistGeneLinearExpressionTrainer:
@@ -55,7 +57,19 @@ class DistGeneLinearExpressionTrainer:
     Gene protein abundance regression predictor
     trainer with multi-GPU access 
     '''
-    def __init__(self, config_path, isdebug):
+    def __init__(
+        self, 
+        config_path, 
+        isdebug,
+        config_dict=None,
+        force_run=True
+    ):
+        self.isdebug = isdebug
+        if config_dict:
+            print('DistGeneExpressionTrainer::using config dict from params not from path')
+            self.config = config_dict
+        else:
+            self.config = DistGeneExpressionTrainer.opt_from_config(config_path)
         self.isdebug = isdebug
         with open(config_path) as f:
             self.config = yaml.load(f, yaml.FullLoader)

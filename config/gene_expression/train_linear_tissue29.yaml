@@ -1,8 +1,8 @@
 # use false to disable setting
 data:
   # cashPath: bio_dl/cash/dataloader_23
-  # cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
-  cashPath: /home/gerzog/repositories/machine_learning/bio_dl/cash/dataloader_23
+  cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
+  # cashPath: /home/gerzog/repositories/machine_learning/bio_dl/cash/dataloader_23
   apiUniprotOutDir: /home/gerzog/repositories/machine_learning/bio_dl/testdata/api_out
   datasets2use:
     # ===== BOTH
@@ -38,9 +38,9 @@ train:
   gpus2use: 1
   each_train_has_own_dataset: False
   # net_name: rna2protein_tissue20.ResNet34V2.015
-  net_name: rna2protein_nci60.BioPerceptrone.002
-  finetune_net_name: rna2protein_nci60.BioPerceptrone.001
-  finetune_params_dir: /home/gerzog/repositories/machine_learning/trained
+  net_name: rna2protein_tissue29.BioPerceptron.001
+  finetune_net_name: rna2protein_nci60.ResNet34V2.013_old9ch
+  finetune_params_dir: /home/ilpech/repositories/mole.001/trained
   use_finetune_experiments: False
   use_finetune_databases: False
   epoch_start_from: 2

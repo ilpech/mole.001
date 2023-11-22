@@ -1,8 +1,8 @@
 # use false to disable setting
 data:
   # cashPath: bio_dl/cash/dataloader_23
-  # cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
-  cashPath: /home/gerzog/repositories/machine_learning/bio_dl/cash/dataloader_23
+  cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
+  # cashPath: /home/gerzog/repositories/machine_learning/bio_dl/cash/dataloader_23
   apiUniprotOutDir: /home/gerzog/repositories/machine_learning/bio_dl/testdata/api_out
   datasets2use:
     # ===== BOTH
