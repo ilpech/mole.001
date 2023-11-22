@@ -4,7 +4,7 @@ cohortsToTrain:
   # ==================================
   # ======TISSUE29
   # ==================================
-  rna2protein_tissue29.ResNet26V2.mole_c001:
+  rna2protein_tissue29.ResNet26V2.c001:
     baseConfigPath: config/gene_expression/train_tissue29_res34v2.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -15,7 +15,7 @@ cohortsToTrain:
     # use minEpochsToFinish = 0 to disable stop after n epoch 
     minEpochsToFinish: 3
   # ==================================
-  rna2protein_tissue29.ResNet50V2.mole_c001:
+  rna2protein_tissue29.ResNet50V2.c001:
     baseConfigPath: config/gene_expression/train_tissue29_res50v2.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -24,7 +24,7 @@ cohortsToTrain:
       modelsInCohort: 5
     minEpochsToFinish: 3
   # ==================================
-  rna2protein_tissue29.ResNet34V1.mole_c001:
+  rna2protein_tissue29.ResNet34V1.c001:
     baseConfigPath: config/gene_expression/train_tissue29_res34v1.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -35,7 +35,7 @@ cohortsToTrain:
   # ==================================
   # ======NCI60
   # ==================================
-  rna2protein_nci60.ResNet26V2.mole_c001:
+  rna2protein_nci60.ResNet26V2.c001:
     baseConfigPath: config/gene_expression/train_nci60_res34v2.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -46,7 +46,7 @@ cohortsToTrain:
     # use minEpochsToFinish = 0 to disable stop after n epoch 
     minEpochsToFinish: 3
   # ==================================
-  rna2protein_nci60.ResNet50V2.mole_c001:
+  rna2protein_nci60.ResNet50V2.c001:
     baseConfigPath: config/gene_expression/train_nci60_res50v2.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -55,7 +55,7 @@ cohortsToTrain:
       modelsInCohort: 5
     minEpochsToFinish: 3
   # ==================================
-  rna2protein_nci60.ResNet34V1.mole_c001:
+  rna2protein_nci60.ResNet34V1.c001:
     baseConfigPath: config/gene_expression/train_nci60_res34v1.yaml
     cohortParamsDir: trained/cohorts
     crossValidation:
@@ -63,3 +63,4 @@ cohortsToTrain:
       stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
       modelsInCohort: 5
     minEpochsToFinish: 3
+ 

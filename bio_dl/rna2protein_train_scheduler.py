@@ -148,7 +148,7 @@ class ModelsCohort:
                 [cohort_chunks[j] for j in range(len(cohort_chunks)) if j != i]
             )
             print(f'train genes: {len(model_train_genes)}')
-            print(f'stabe val genes: {len(cohort_dataset.genes2val)}')
+            print(f'stable val genes: {len(cohort_dataset.genes2val)}')
             print(f'cross val genes: {len(model_cross_validation_genes)}')
             cohort_dataset.genes2train = model_train_genes
             model_cross_val_genes_path = os.path.join(
@@ -168,6 +168,9 @@ class ModelsCohort:
             train_settings['epochs'] = self.min_epochs2finish
             train_settings['params_dir'] = self.cohortDir()
             train_settings['net_name'] = model_name
+            cohort_dataset._valexps2indxs = []
+            cohort_dataset._exps2indxs = []
+            cohort_dataset._warmupExps()
             if remained_epochs:
                 print(f'cohortTrain::training with model {model_name}, remained {remained_epochs} epochs')
                 trainer = DistGeneExpressionTrainer(
@@ -221,7 +224,6 @@ class TrainScheduler:
     def processCohorts(self):
         for cohort_name, models_cohort in self.cohorts.items():
             models_cohort.cohortTrain()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
