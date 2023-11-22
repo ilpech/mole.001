@@ -32,15 +32,6 @@ cohortsToTrain:
       stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
       modelsInCohort: 5
     minEpochsToFinish: 3
-  # # ==================================
-  # rna2protein_tissue29.BioPerceptrone.mole_c001:
-  #   baseConfigPath: config/gene_expression/train_linear_tissue29.yaml
-  #   cohortParamsDir: trained/cohorts
-  #   crossValidation:
-  #     stableValidationPercent: False
-  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
-  #     modelsInCohort: 5
-  #   minEpochsToFinish: 3
   # ==================================
   # ======NCI60
   # ==================================
@@ -72,14 +63,3 @@ cohortsToTrain:
       stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
       modelsInCohort: 5
     minEpochsToFinish: 3
-  # # ==================================
-  # rna2protein_nci60.BioPerceptrone.mole_c001:
-  #   baseConfigPath: config/gene_expression/train_linear_nci60.yaml
-  #   cohortParamsDir: trained/cohorts
-  #   crossValidation:
-  #     stableValidationPercent: False
-  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
-  #     modelsInCohort: 5
-  #   minEpochsToFinish: 3
-
-  

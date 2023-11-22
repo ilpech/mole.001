@@ -66,7 +66,6 @@ class DistGeneDataLoader(Dataset):
         self.net_config_path = net_config_path
         self.use_net_experiments = use_net_experiments
         self.use_net_databases = use_net_databases
-        self.config = DistGeneDataLoader.opt_from_config(self.config_path)
         self.config_data = self.config['data']
         self.config_train = self.config['train']
         self.cash_path = self.config_data['cashPath']
@@ -98,8 +97,9 @@ class DistGeneDataLoader(Dataset):
         self.databases_alphs = {}
         self.most_common_databases_alphs = None # added for linear models
         self.max_len_db_alph = self.max_var_layer * len(Gene.proteinAminoAcidsAlphabet())
-        print('reading mapping', self.gene_mapping_path)
-        self.mapping = mapping2dict(self.gene_mapping_path)
+        # TODO move under flag
+        # print('reading mapping', self.gene_mapping_path)
+        # self.mapping = mapping2dict(self.gene_mapping_path)
         self.max_label = None
         self.net_config = None
         self.net_name = None
@@ -310,7 +310,8 @@ class DistGeneDataLoader(Dataset):
             print('error reading genes2val from config {}'.format(path2model_config))
         self.genes2train = [x for x, _ in self.genes().items() if x not in genes2val]
         self.genes2val = [x for x, _ in self.genes().items() if x in genes2val]
-        self.max_label = cfg['denorm_max_label']
+        # self.max_label = cfg['denorm_max_label']
+        self.max_label = 1.0
         print('genes splitted from file {} \n{} in val \n{} in train'.format(
             path2model_config, 
             len(self.genes2val), 

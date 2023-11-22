@@ -60,9 +60,6 @@ class ModelsCohort:
         try:
             self.loadTorchModels()
         except NotADirectoryError:
-            print(f'ModelsCohort::creating new cohort dir {self.cohortDir()}')
-            if not self.isdebug:
-                ensure_folder(self.cohortDir())
             self.new_cohort = True
         if self.train:
             print(f'ModelsCohort::start training process...')
@@ -93,7 +90,8 @@ class ModelsCohort:
                 ctx='cpu'
             )
             print(f'loadTorchModels:: model {net_name} loaded, last epoch {self.models[net_name].lastEpoch()}')
-        print(f'loadTorchModels::{len(self.models)} models loaded to cohort')
+        if len(self.models):
+            print(f'loadTorchModels::{len(self.models)} models loaded to cohort')
 
     def cohortTrainQueue(self):
         trainQueue = {}
@@ -113,6 +111,9 @@ class ModelsCohort:
         queue = self.cohortTrainQueue()
         if not len(queue):
             raise Exception(f'no queue in {self.cohort_name}')
+        if not self.isdebug:
+            ensure_folder(self.cohortDir())
+            print(f'ModelsCohort::creating new cohort dir {self.cohortDir()}')
         dataset_config = DistGeneDataLoader.opt_from_config(self.train_config_path)
         data_settings = dataset_config['data']
         train_settings = dataset_config['train']
@@ -126,8 +127,8 @@ class ModelsCohort:
                 finetune_params_dir, 
                 finetune_net_name
             )
-        train_settings['splitGeneFromModelConfig'] = self.stable_validataion_genes_path
-
+        data_settings['splitGeneFromModelConfig'] = self.stable_validataion_genes_path
+        data_settings['ifSplitPercentToTrain'] = False
         cohort_dataset = DistGeneDataLoader(
             self.train_config_path,
             net_config_path=net_config_dir,
@@ -141,16 +142,15 @@ class ModelsCohort:
         cohort_chunks = np.array_split(train_genes, self.cohort_size)
         if not self.isdebug:
             cp_r(self.stable_validataion_genes_path, self.cohortDir())
-        # debug(cohort_chunks.shape)
-        debug(len(train_genes))
-        debug(len(cohort_chunks))
-        debug([len(x) for x in cohort_chunks])
-        debug(queue)
         for i, (model_name, epochs_interval) in enumerate(queue.items()):
             model_cross_validation_genes = cohort_chunks[i]
             model_train_genes = flat_list(
                 [cohort_chunks[j] for j in range(len(cohort_chunks)) if j != i]
             )
+            print(f'train genes: {len(model_train_genes)}')
+            print(f'stabe val genes: {len(cohort_dataset.genes2val)}')
+            print(f'cross val genes: {len(model_cross_validation_genes)}')
+            cohort_dataset.genes2train = model_train_genes
             model_cross_val_genes_path = os.path.join(
                 self.cohortDir(),
                 model_name
@@ -168,9 +168,7 @@ class ModelsCohort:
             train_settings['epochs'] = self.min_epochs2finish
             train_settings['params_dir'] = self.cohortDir()
             train_settings['net_name'] = model_name
-            # exit()
             if remained_epochs:
-                # train_settings[]
                 print(f'cohortTrain::training with model {model_name}, remained {remained_epochs} epochs')
                 trainer = DistGeneExpressionTrainer(
                     self.train_config_path,
@@ -178,7 +176,6 @@ class ModelsCohort:
                     config_dict=dataset_config,
                     force_run=False
                 )
-                # exit()
                 trainer.train_loop(
                     dataset=cohort_dataset
                 )
