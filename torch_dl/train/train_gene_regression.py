@@ -45,7 +45,7 @@ from torch_dl.scheduler.cosine_warmup import CosineAnnealingWarmupRestarts
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import warnings
-
+from typing import Dict, List
 torch.cuda.empty_cache()
 
 class DistGeneExpressionTrainer:
@@ -53,10 +53,19 @@ class DistGeneExpressionTrainer:
     Gene protein abundance regression predictor
     trainer with multi-GPU access 
     '''
-    def __init__(self, config_path, isdebug):
+    def __init__(
+        self, 
+        config_path, 
+        isdebug, 
+        config_dict:Dict=None,
+        force_run=True
+    ):
         self.isdebug = isdebug
-        with open(config_path) as f:
-            self.config = yaml.load(f, yaml.FullLoader)
+        if config_dict:
+            print('DistGeneExpressionTrainer::using config dict from params not from path')
+            self.config = config_dict
+        else:
+            self.config = DistGeneExpressionTrainer.opt_from_config(config_path)
         self.start_time = curDateTime()
         self.config_path = config_path
         self.data_settings = self.config['data']
@@ -68,15 +77,16 @@ class DistGeneExpressionTrainer:
         self.use_finetune_experiments = self.train_settings['use_finetune_experiments']
         self.params_dir = self.train_settings['params_dir']
         self.params_path = os.path.join(self.params_dir, self.net_name)
-        if os.path.isdir(self.params_path):
-            raise Exception(
-                'error! net out dir {} already exists, choose another net name'.format(
-                    self.params_path
-                ))
-        if not isdebug:
-            warnings.filterwarnings('ignore')
-            ensure_folder(self.params_path)
-            cp_r(self.config_path, self.params_path)
+        if force_run:
+            if os.path.isdir(self.params_path) and not isdebug:
+                raise Exception(
+                    'error! net out dir {} already exists, choose another net name'.format(
+                        self.params_path
+                    ))
+            if not isdebug:
+                warnings.filterwarnings('ignore')
+                ensure_folder(self.params_path)
+                cp_r(self.config_path, self.params_path)
         self.log_path = '{}/{}_log.txt'.format(self.params_path, self.net_name)
         self.gpus2use = self.train_settings['gpus2use']
         self.logger = TrainLogger(self.log_path, '[MAIN_GPUs::{}]'.format(self.gpus2use))
@@ -130,27 +140,67 @@ class DistGeneExpressionTrainer:
                 )
             )
             self.gpus2use = self.avail_gpus
+        self.isdebug_cpu = False
         if torch.cuda.is_available():
             self.ctx = 'gpu'
             self.logger.print('successfully created gpu array -> using gpu')
             self.dist_backend = self.dist_gpu_backend
         else:
             self.ctx = 'cpu'
-            if self.isdebug:
-                self.logger.print('debug mode -> using cpu')
-            else:
-                self.logger.print('cannot create gpu array -> using cpu')
-                self.logger.print(
-                    'Error! dist train can not work without gpu, use usual train instead'
-                )
-                exit()
-        #=========DIST
-        if dist.is_available() and self.gpus2use > 0:
-            if not self.isdebug:
-                mp.spawn(self.train_loop, nprocs=self.gpus2use)
+            self.isdebug = True
+            self.logger.print('using cpu->enable debug mode')
         self.current_lr = None
         self.current_batch_size = None
-        
+        if force_run:
+            if self.gpus2use == 1 or self.isdebug:
+                self.train_loop()
+            # #=========DIST
+            elif dist.is_available() and self.gpus2use > 0:
+                print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
+                mp.spawn(self.train_loop, nprocs=self.gpus2use)
+        # if self.gpus2use > self.avail_gpus:
+        #     print('avail gpus {} less than gpus2use param from config {}'.
+        #     format(
+        #         self.avail_gpus, self.gpus2use
+        #         )
+        #     )
+        #     self.gpus2use = self.avail_gpus
+        # if torch.cuda.is_available():
+        #     self.ctx = 'gpu'
+        #     self.logger.print('successfully created gpu array -> using gpu')
+        #     self.dist_backend = self.dist_gpu_backend
+        # else:
+        #     self.ctx = 'cpu'
+        #     if self.isdebug:
+        #         self.logger.print('debug mode -> using cpu')
+        #     else:
+        #         self.logger.print('cannot create gpu array -> using cpu')
+        #         self.logger.print(
+        #             'Error! dist train can not work without gpu, use usual train instead'
+        #         )
+        #         exit()
+        # #=========DIST
+        # if dist.is_available() and self.gpus2use > 0:
+        #     if not self.isdebug:
+        #         mp.spawn(self.train_loop, nprocs=self.gpus2use)
+        # self.current_lr = None
+        # self.current_batch_size = None
+
+        # if force_run:
+        #     if self.gpus2use == 1 or self.isdebug:
+        #         self.train_loop()
+        #     # #=========DIST
+        #     elif dist.is_available() and self.gpus2use > 0:
+        #         print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
+        #         mp.spawn(self.train_loop, nprocs=self.gpus2use)
+
+    @staticmethod
+    def opt_from_config(config_path):
+        with open(config_path) as f:
+            config = yaml.load(f, yaml.FullLoader)
+            print(f'DistGeneExpressionTrainer::from config {config_path}')
+        return config
+
     def create_model(self, num_channels):
         '''
         Create model or load epoch if self.epoch_start_from is set 
@@ -223,7 +273,12 @@ class DistGeneExpressionTrainer:
             test_mode=self.isdebug
         )
         
-    def train_loop(self, gpu_id=0):
+    # def train_loop(self, gpu_id=0):
+    def train_loop(
+        self, 
+        gpu_id=0,
+        dataset=None
+    ):
         '''
         Multi-GPU train loop, 
         each loop function is created for
@@ -252,18 +307,19 @@ class DistGeneExpressionTrainer:
             gpu_id,
             self.current_batch_size,
             self.gpus2use,
+            dataset=dataset,
             # num_workers=os.cpu_count()-1,
             num_workers=self.gpus2use*2,
             net_config_path=net_config_dir,
             use_net_experiments=self.use_finetune_experiments
         )
-        data_loader = train_loader.dataset.baseloader
-        self.max_label = data_loader.max_label
+        dataset = train_loader.dataset.baseloader
+        self.max_label = dataset.max_label
         print(f'dist dataloader created for gpu {gpu_id}')
         inference_shape = (
             1, 
             4+len(databases), 
-            data_loader.max_var_layer, 
+            dataset.max_var_layer, 
             len(Gene.proteinAminoAcidsAlphabet())
         )
         logger.print('creating resnset regression model...'.format(gpu_id))
@@ -275,26 +331,23 @@ class DistGeneExpressionTrainer:
             torch.zeros(size=inference_shape)
         )
         if dist.is_available() and gpu_id >= 0:
-            dist_setup(gpu_id, self.dist_backend, self.gpus2use)
             model._model.cuda(gpu_id)
             # wrap the model to current gpu
-            model._model = DDP(model._model, device_ids=[gpu_id])
+            if gpu_id > 0:
+                dist_setup(gpu_id, self.dist_backend, self.gpus2use)
+                model._model = DDP(model._model, device_ids=[gpu_id])
         else:
             print('train adopted only for gpu, exit...')
             exit()
           
         logger.print('train started at::{}'.format(start_time))
         if gpu_id == 0:
-            self.logger.print('{} genes2train'.format(len(data_loader.genes2train)))
-            self.logger.print('{} genes2val'.format(len(data_loader.genes2val)))
-            self.logger.print('{} epxs in data'.format(len(data_loader)))
+            self.logger.print('{} genes2train'.format(len(dataset.genes2train)))
+            self.logger.print('{} genes2val'.format(len(dataset.genes2val)))
+            self.logger.print('{} epxs in data'.format(len(dataset)))
         
-        max_eps = data_loader.maxProteinMeasurementsInData()
-        
-        data_cnt = len(data_loader)
+        data_cnt = len(dataset)
         L = torch.nn.MSELoss()
-        # L = torch.nn.SmoothL1Loss(beta=0.5)
-        # L = torch.nn.HuberLoss(delta=0.5)
         scheduler = None
         if self.lr_mode == 'byhand':
             lr_dict = self.lr_settings['byHand']
@@ -335,20 +388,20 @@ class DistGeneExpressionTrainer:
         num_batch = roundUp(data_cnt/self.current_batch_size)
         best_epoch = 0
         max_val_p2n = None
-        assert len(data_loader.databases_alphs)
+        assert len(dataset.databases_alphs)
         with open(self.databases_alphs_path, 'w') as f:
-            json.dump(data_loader.databases_alphs, f, indent=4)
+            json.dump(dataset.databases_alphs, f, indent=4)
             print('databases info written', self.databases_alphs_path)
         if gpu_id == 0:
             self.logger.print('batch shape::{}'.format(inference_shape))
-        rna_exps_alphabet = data_loader.rnaMeasurementsAlphabet
+        rna_exps_alphabet = dataset.rnaMeasurementsAlphabet
         if self.max_label is None:
             self.max_label = 1.0
             # self.max_label = norm_shifted_log(
-            #     data_loader.maxProteinMeasurementInData()
+            #     dataset.maxProteinMeasurementInData()
             # )
         max_label = self.max_label
-        protein_exps_alphabet = data_loader.proteinMeasurementsAlphabet
+        protein_exps_alphabet = dataset.proteinMeasurementsAlphabet
         config_data = {
             'net_name': self.net_name,
             'model_name': self.model2use,
@@ -359,7 +412,7 @@ class DistGeneExpressionTrainer:
             'rna_exps_alphabet': rna_exps_alphabet,
             'protein_exps_alphabet': protein_exps_alphabet,
             'databases': databases,
-            'genes2val': data_loader.genes2val
+            'genes2val': dataset.genes2val
         }
         if gpu_id == 0:
             with open(self.model_config_path, 'w') as f:
@@ -395,7 +448,7 @@ class DistGeneExpressionTrainer:
         scheduler_step = 0
         for i in range(self.epochs):
             model.model().train()  
-            data_loader.shuffleTrain()
+            dataset.shuffleTrain()
             epoch = i
             epoch_tic = time.time()
             if self.lr_mode == 'byHand':
@@ -420,6 +473,7 @@ class DistGeneExpressionTrainer:
                     gpu_id,
                     self.current_batch_size,
                     self.gpus2use,
+                    dataset=dataset,
                     # num_workers=os.cpu_count()-1,
                     num_workers=self.gpus2use*2,
                     net_config_path=os.path.join(

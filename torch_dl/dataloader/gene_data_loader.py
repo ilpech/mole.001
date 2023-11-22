@@ -49,12 +49,20 @@ class DistGeneDataLoader(Dataset):
         config_path, 
         net_config_path=None,
         use_net_experiments=True,
-        use_net_databases=True
+        use_net_databases=True,
+        config_dict=None
     ):
         self.creation_time = curDateTime()
         self.config_path = config_path
         if len(self.config_path) == 0:
            raise Exception('provide path to .yaml train config with data branch') 
+        if config_dict:
+            print('GeneDataLoader::using config from param')
+            self.config = config_dict
+        else:    
+            if len(self.config_path) == 0:
+                raise Exception('GeneDataLoader::provide path to .yaml train config with data branch') 
+            self.config = DistGeneDataLoader.opt_from_config(self.config_path)
         self.net_config_path = net_config_path
         self.use_net_experiments = use_net_experiments
         self.use_net_databases = use_net_databases
@@ -1068,19 +1076,26 @@ if __name__ == '__main__':
             if sample is None:
                 # print('{} is none'.format(gene_id))
                 continue
-            viz = baseloader.viz_sample(
-                gene_id,
-                sample,
-                '/home/ilpech/datasets/tests',
-                layout=(
-                    'protein_id',
-                    'rna_id',
-                    'rna_value',
-                    'aminoacids',
-                    'annotations',
-                ),
-                data2viz=15
-            )
+            debug(gene_id)
+            debug(np.sum(sample[3]), prefix='amino_sequences::')
+            debug(np.sum(sample[4]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[0]}::')
+            debug(np.sum(sample[5]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[1]}::')
+            debug(np.sum(sample[6]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[2]}::')
+            debug(np.sum(sample[7]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[3]}::')
+            debug(np.sum(sample[8]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[4]}::')
+            # viz = baseloader.viz_sample(
+            #     gene_id,
+            #     sample,
+            #     '/home/ilpech/datasets/tests',
+            #     layout=(
+            #         'protein_id',
+            #         'rna_id',
+            #         'rna_value',
+            #         'aminoacids',
+            #         'annotations',
+            #     ),
+            #     data2viz=15
+            # )
             # if viz is None:
             #     print('{} viz is none'.format(gene_id))
             break

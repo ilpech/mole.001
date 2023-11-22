@@ -1,7 +1,7 @@
 # python3 bio_dl/rna2protein_train_scheduler.py --config config/gene_expression/train_cohorts.yaml --isdebug False
 import os
 from torch_dl.train.train_gene_regression import DistGeneExpressionTrainer
-from torch_dl.dataloader.gene_data_loader import GeneDataLoader
+from torch_dl.dataloader.gene_data_loader import DistGeneDataLoader
 from torch_dl.model.model import TorchModel
 from typing import List, Dict
 from varname.helpers import debug
@@ -113,7 +113,7 @@ class ModelsCohort:
         queue = self.cohortTrainQueue()
         if not len(queue):
             raise Exception(f'no queue in {self.cohort_name}')
-        dataset_config = GeneDataLoader.opt_from_config(self.train_config_path)
+        dataset_config = DistGeneDataLoader.opt_from_config(self.train_config_path)
         data_settings = dataset_config['data']
         train_settings = dataset_config['train']
         use_finetune_experiments = train_settings['use_finetune_experiments']
@@ -128,13 +128,13 @@ class ModelsCohort:
             )
         train_settings['splitGeneFromModelConfig'] = self.stable_validataion_genes_path
 
-        cohort_dataset = GeneDataLoader(
+        cohort_dataset = DistGeneDataLoader(
             self.train_config_path,
             net_config_path=net_config_dir,
             use_net_experiments=use_finetune_experiments,
             use_net_databases=use_finetune_databases,
             # read_genes_mapping=True,
-            read_genes_mapping=False,
+            # read_genes_mapping=False,
             config_dict=dataset_config
         )
         train_genes = cohort_dataset.genes2train

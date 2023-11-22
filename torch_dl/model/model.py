@@ -315,7 +315,7 @@ class TorchModel:
             ext = os.path.splitext(param_file)[1]
             if '.pt' == ext:
                 for epoch in epochs2export:
-                    if '{:04d}'.format(epoch) in param_file:
+                    if '_{:04d}'.format(epoch) in param_file:
                         do_export = True
                         break
             if not do_export:
@@ -338,6 +338,33 @@ class TorchModel:
         
     def getParamsNumber(self):
         return model_params_cnt(self._model)
+
+    @staticmethod
+    def netWeights2epoch(param_file):
+        '''
+        check if file have format of exported epoch 
+        like rna2protein_nci60.ResNet34V2.005_0012.pt,
+        info after last _ should be epoch number
+        
+        return None if epoch not found
+        '''
+        fname, ext = os.path.splitext(param_file)
+        if '.pt' != ext:
+            return None
+        last_split = fname.split('_')[-1]
+        if len(last_split) == 4:
+            try:
+                epoch = int(last_split)
+                return epoch
+            except ValueError:
+                return None 
+
+    def lastEpoch(self):
+        ls_params = ls(self.pt_dir())
+        epochs = sorted([TorchModel.netWeights2epoch(x) for x in ls_params if x])
+        if not len(epochs):
+            return None
+        return epochs[-1]
     
 def export_regression():
     from torch_dl.model.regression_model import RegressionResNet2d18 
