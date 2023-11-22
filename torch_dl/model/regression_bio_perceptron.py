@@ -8,6 +8,7 @@ class RegressionBioPerceptron(nn.Module):
         self,
         input_annotations_len,
         input_type_len,
+        input_gene_seq_bow_len,
         input_features_hidden_size,
         hidden_size, #80
         annotation_dropout, #0.25
@@ -20,36 +21,45 @@ class RegressionBioPerceptron(nn.Module):
         self.hidden_size = hidden_size
         self.annotation_dropout = annotation_dropout
         self.hidden_dropout = hidden_dropout
+        self.input_gene_seq_bow_len = input_gene_seq_bow_len
 
         self.annotations_dropout = nn.Dropout(p=self.annotation_dropout) #check value from paper
         self.annotations_linear = nn.Linear(self.input_annotations_len, self.input_features_hidden_size)
         
         self.type_ids_linear = nn.Linear(self.input_type_len, self.input_features_hidden_size)
         
-        self.linear_layer = nn.Linear(
-            self.hidden_size, 
+        self.gene_seq_linear = nn.Linear(
+            self.input_gene_seq_bow_len,
             self.input_features_hidden_size
+        )
+        
+        self.linear_layer = nn.Linear(
+            self.input_features_hidden_size * 3, 
+            self.hidden_size
         )
         self.dropout = nn.Dropout(self.hidden_dropout)
         
         self.activation = nn.ReLU()
         
-        self.add_weight_linear = nn.Linear(self.input_features_hidden_size, 1)
-        self.mul_weight_linear = nn.Linear(self.input_features_hidden_size, 1)
+        self.add_weight_linear = nn.Linear(self.hidden_size, 1)
+        self.mul_weight_linear = nn.Linear(self.hidden_size, 1)
     
     def forward(
         self, 
         annotations_tensor,
         type_ids_tensor,
-        rna_tensor
+        rna_tensor,
+        gene_seq_bow_tensor
     ):
         annotations_tensor = self.annotations_dropout(annotations_tensor)
         annotations_tensor = self.annotations_linear(annotations_tensor)
         
         type_ids_tensor = self.type_ids_linear(type_ids_tensor) #ne uvidel 
         
+        gene_seq_bow_tensor = self.gene_seq_linear(gene_seq_bow_tensor)
+        
         all_inputs = torch.cat(
-            (annotations_tensor, type_ids_tensor), 1 #in original paper they also use rp_in
+            (annotations_tensor, type_ids_tensor, gene_seq_bow_tensor), 1 #in original paper they also use rp_in
         )
         x = self.linear_layer(all_inputs)
         x = self.dropout(x)
