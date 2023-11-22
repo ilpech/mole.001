@@ -296,6 +296,7 @@ class DistGeneLinearExpressionTrainer:
         network = RegressionBioPerceptron(
             input_annotations_len=annotations_len, 
             input_type_len=len(data_loader.proteinMeasurementsAlphabet), 
+            input_gene_seq_bow_len=len(Gene.proteinAminoAcidsAlphabet()),
             input_features_hidden_size=self.input_features_hidden_size,
             hidden_size=self.hidden_size,
             annotation_dropout=self.annotations_dropout,
@@ -482,22 +483,28 @@ class DistGeneLinearExpressionTrainer:
             passed = 0 # train batches passed
             valpassed = 0 # val batches passed
             # for data, labels in train_loader:
-            for annotations, types_one_hot, norm_rna_vals, labels in train_loader:
+            for annotations, types_one_hot, norm_rna_vals, gene_seq_bow, labels in train_loader:
                 if norm_rna_vals is None or labels is None:
                     continue
                 # labels_gpu, data_gpu = (
                 #     labels.unsqueeze(1).float().cuda(gpu_id),
                 #     data.float().cuda(gpu_id)
                 # )
-                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, labels_gpu = (
+                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu, labels_gpu = (
                     annotations.float().cuda(gpu_id),
                     types_one_hot.float().cuda(gpu_id),
                     norm_rna_vals.float().cuda(gpu_id),
+                    gene_seq_bow.float().cuda(gpu_id),
                     labels.unsqueeze(1).float().cuda(gpu_id)
                 )
                 
                 # out = model(data_gpu)
-                out = model(annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu)
+                out = model(
+                    annotations_gpu, 
+                    types_one_hot_gpu, 
+                    norm_rna_vals_gpu, 
+                    gene_seq_bow_gpu
+                )
                 loss = L(
                     out, 
                     labels_gpu
@@ -562,6 +569,7 @@ class DistGeneLinearExpressionTrainer:
             del types_one_hot_gpu
             del norm_rna_vals_gpu
             del labels_gpu
+            del gene_seq_bow_gpu
             torch.cuda.empty_cache()
             train_time = time.time() - train_tic
             #val
@@ -569,17 +577,18 @@ class DistGeneLinearExpressionTrainer:
             val_tic = time.time()
             print('\n{}::\nval started...'.format(curDateTime()))
             # for data, labels in val_loader:
-            for annotations, types_one_hot, norm_rna_vals, labels in val_loader:
+            for annotations, types_one_hot, norm_rna_vals, gene_seq_bow, labels in val_loader:
                 # labels_gpu, data_gpu = labels.unsqueeze(1).float().cuda(gpu_id), \
                 #                 data.float().cuda(gpu_id)
-                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, labels_gpu = (
+                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu, labels_gpu = (
                     annotations.float().cuda(gpu_id),
                     types_one_hot.float().cuda(gpu_id),
                     norm_rna_vals.float().cuda(gpu_id),
+                    gene_seq_bow.float().cuda(gpu_id),
                     labels.unsqueeze(1).float().cuda(gpu_id)
                 )
                 # out = model(data_gpu)
-                out = model(annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu)
+                out = model(annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu)
                 
                 valpassed += 1
                 val_metric_mse.update(out, labels_gpu)

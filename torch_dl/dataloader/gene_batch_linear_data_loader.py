@@ -126,6 +126,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
         norm_rna_value = norm_shifted_log(rna_value).astype(np.float32)
         norm_rna_value = np.expand_dims(norm_rna_value, 0)
         
+        gene_seq_bow = gene.apiSeqBagOfWord(self.apiUniprotOutDir)
+        
         #concatenate 1d one hot vectors for each db like in original paper
         #in original paper they have other dims values - check
         use_cash = False
@@ -163,7 +165,7 @@ class GeneLinearDataLoader(DistGeneDataLoader):
         protein_exp_one_hot = np.zeros([len(protein_exps_alphabet)], dtype=np.float32)
         protein_exp_one_hot[protein_exp_id].fill(1.0)
         
-        return annotations_gene_one_hot, protein_exp_one_hot, norm_rna_value
+        return annotations_gene_one_hot, protein_exp_one_hot, norm_rna_value, gene_seq_bow
 
 
 class TrainGeneLinearDataLoader(DataLoader):
@@ -200,11 +202,12 @@ class TrainGeneLinearDataLoader(DataLoader):
             self.ids2use = self.baseloader.valExpsIds() 
         uid, rna_id, prot_id = self.ids2use[i]
         gene = self.baseloader.gene(uid)
+        
         # databases_alphs = self.baseloader.databases_alphs
         databases_alphs = self.baseloader.most_common_databases_alphs
         prot_exps_alph = self.baseloader.proteinMeasurementsAlphabet
         prot_exp = prot_exps_alph[prot_id]
-        annotations, type_one_hot, norm_rna_val = self.baseloader.gene2sample1d(
+        annotations, type_one_hot, norm_rna_val, gene_seq_bow = self.baseloader.gene2sample1d(
             uid,
             databases_alphs,
             rna_exp_name=None,
@@ -217,5 +220,5 @@ class TrainGeneLinearDataLoader(DataLoader):
         label = norm_shifted_log(
             gene.protein_measurements[prot_exp]
         )/self.max_label
-        return annotations, type_one_hot, norm_rna_val, label
+        return annotations, type_one_hot, norm_rna_val, gene_seq_bow, label
 

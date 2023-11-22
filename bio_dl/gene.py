@@ -99,3 +99,16 @@ class Gene:
             debug(len(seq))
             return None
         
+    def apiSeqBagOfWord(self, outdir):
+        return Gene.seq2bagOfWord(self.apiSequence(outdir))
+    
+    @staticmethod
+    def seq2bagOfWord(seq):
+        """
+        Bag of words coding of aminoacids sequence
+        """
+        alphabet = Gene.proteinAminoAcidsAlphabet()
+        bag_of_word = [seq.count(x) for x in alphabet]
+        return np.array(bag_of_word, dtype=np.float32)
+        
+    
