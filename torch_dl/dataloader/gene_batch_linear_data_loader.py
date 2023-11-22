@@ -27,7 +27,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
         dataset=None, # already used DistGeneDataLoader for fast changing of batch size
         net_config_path=None, # to fast load db mappings,
         use_net_experiments=False,
-        use_net_databases=True
+        use_net_databases=True,
+        crop_db_alph=True
     ):
         """
         Creating dataset for training and validation
@@ -40,7 +41,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
                 config_path, 
                 net_config_path,
                 use_net_experiments,
-                use_net_databases
+                use_net_databases,
+                crop_db_alph
             )
         train_dataset = TrainGeneLinearDataLoader(
             dataset, 
