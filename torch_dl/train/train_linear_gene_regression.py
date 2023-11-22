@@ -270,7 +270,8 @@ class DistGeneLinearExpressionTrainer:
             # num_workers=os.cpu_count()-1,
             num_workers=self.gpus2use*2,
             net_config_path=net_config_dir,
-            use_net_databases=self.use_finetune_databases
+            use_net_databases=self.use_finetune_databases,
+            crop_db_alph=False
         )
         data_loader = train_loader.dataset.baseloader
         self.max_label = data_loader.max_label
@@ -475,7 +476,8 @@ class DistGeneLinearExpressionTrainer:
                         self.finetune_params_dir, 
                         self.finetune_net_name
                     ),
-                    use_net_databases=self.use_finetune_databases
+                    use_net_databases=self.use_finetune_databases,
+                    crop_db_alph=False
                 )
                 objs2train = len(train_loader)
             train_tic = time.time()

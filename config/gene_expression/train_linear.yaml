@@ -9,11 +9,11 @@ data:
     # tissue29: True
     # nci60: True
     # ===== TISSUE29
-    # tissue29: True
-    # nci60: False
+    tissue29: True
+    nci60: False
     # ===== NCI60
-    tissue29: False
-    nci60: True
+    # tissue29: False
+    # nci60: True
   # if maxGenesFromDataset == 0 load full dataset
   maxGenesFromDataset: 0
   # tissue29_rna: ./bio_dl/testdata/tissue29.1k_rna.tsv
@@ -38,12 +38,15 @@ train:
   gpus2use: 1
   each_train_has_own_dataset: False
   # net_name: rna2protein_tissue20.ResNet34V2.015
-  net_name: rna2protein_nci60.BioPerceptrone.002
-  finetune_net_name: rna2protein_nci60.BioPerceptrone.001
-  finetune_params_dir: /home/gerzog/repositories/machine_learning/trained
+  # net_name: rna2protein_nci60.BioPerceptron.003
+  net_name: rna2protein_tissue29.BioPerceptron.002
+  # finetune_net_name: rna2protein_nci60.BioPerceptron.001
+  finetune_net_name: rna2protein_tissue29.ResNet34V2.010
+  finetune_params_dir: /home/ilpech/repositories/machine_learning/trained
+  # finetune_params_dir: ./trained
   use_finetune_experiments: False
   use_finetune_databases: False
-  epoch_start_from: 2
+  epoch_start_from: 0
   epochs: 900
   log_interval: 3
   # metric_flush_interval: 500
@@ -95,13 +98,13 @@ train:
       warmup_steps: 250
       first_cycle_steps: 500
       step_each_batch: 1
-      cycle_mult: 1.0
+      cycle_mult: 1.5
       # decrease max learning rate by cycle
       # gamma: 0.8
       gamma: 0.95
       
   batch_size:
-    0: 1000
+    0: 256
   augm:
     isEnabled: True
     epoch_p:

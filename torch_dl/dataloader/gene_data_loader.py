@@ -50,7 +50,8 @@ class DistGeneDataLoader(Dataset):
         net_config_path=None,
         use_net_experiments=True,
         use_net_databases=True,
-        config_dict=None
+        config_dict=None,
+        crop_db_alph=True
     ):
         self.creation_time = curDateTime()
         self.config_path = config_path
@@ -98,7 +99,8 @@ class DistGeneDataLoader(Dataset):
         self.databases_alphs = {}
         self.most_common_databases_alphs = None # added for linear models
         self.max_len_db_alph = self.max_var_layer * len(Gene.proteinAminoAcidsAlphabet())
-        print('reading mapping', self.gene_mapping_path)
+        self.crop_db_alph = crop_db_alph 
+        print('reading mapping', self.gene_mapping_path) 
         self.mapping = mapping2dict(self.gene_mapping_path)
         self.max_label = None
         self.net_config = None
@@ -672,9 +674,10 @@ class DistGeneDataLoader(Dataset):
                     if data not in uniq_data:
                         uniq_data.append(data)
             print('db {} filled with {} ids'.format(db_name, len(uniq_data)))
-            if len(uniq_data) > max_len_alph:
-                print('last ids deleted')
-                uniq_data = uniq_data[:max_len_alph]
+            if self.crop_db_alph:
+                if len(uniq_data) > max_len_alph:
+                    print('last ids deleted')
+                    uniq_data = uniq_data[:max_len_alph]
             self.databases_alphs[db_name] = uniq_data
         return self.databases_alphs 
         
