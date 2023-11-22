@@ -99,8 +99,8 @@ class DistGeneDataLoader(Dataset):
         self.most_common_databases_alphs = None # added for linear models
         self.max_len_db_alph = self.max_var_layer * len(Gene.proteinAminoAcidsAlphabet())
         # TODO move under flag
-        # print('reading mapping', self.gene_mapping_path)
-        # self.mapping = mapping2dict(self.gene_mapping_path)
+        print('reading mapping', self.gene_mapping_path)
+        self.mapping = mapping2dict(self.gene_mapping_path)
         self.crop_db_alph = crop_db_alph 
         self.max_label = None
         self.net_config = None
@@ -256,8 +256,8 @@ class DistGeneDataLoader(Dataset):
         # debug(rna_exps_alphabet)
         for gene_uid, gene in self.genes().items():
             to_train = False
-            if gene_uid in self.genes2train:
-                to_train = True
+            if gene_uid not in self.genes2train and gene_uid not in self.genes2val: 
+                continue
             for rna_exp, value in gene.rna_measurements.items():
                 if value == 0.:
                     continue

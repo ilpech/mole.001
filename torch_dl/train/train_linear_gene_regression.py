@@ -251,7 +251,12 @@ class DistGeneLinearExpressionTrainer:
             test_mode=self.isdebug
         )
         
-    def train_loop(self, gpu_id=0):
+    def train_loop(
+        self, 
+        gpu_id=0, 
+        dataset=None
+    ):
+        
         '''
         Multi-GPU train loop, 
         each loop function is created for
@@ -281,6 +286,7 @@ class DistGeneLinearExpressionTrainer:
             gpu_id,
             self.current_batch_size,
             self.gpus2use,
+            dataset=dataset,
             # num_workers=os.cpu_count()-1,
             num_workers=self.gpus2use*2,
             net_config_path=net_config_dir,
