@@ -1,5 +1,6 @@
 #python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/rna2protein_tissue29.ResNet34V2.005 --epoch 4 --data_config config/gene_expression/train_tissue29.yaml --only_val 1 --write_norm False --batch_size 100
-#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/cohorts/rna2protein_nci60.ResNet50V2.c001/rna2protein_nci60.ResNet50V2.c001.001 --epoch 4 --data_config config/gene_expression/train_nci60_res50v2.yaml --only_val 1 --write_norm False --batch_size 100
+#cross val
+#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003 --epoch 2 --data_config config/gene_expression/train_tissue29_res50v2.yaml --only_val 1 --write_norm False --batch_size 8 --cross_val_genes trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003_val_scheduler_genes.json
 import os
 import sys
 import numpy as np
@@ -40,6 +41,7 @@ parser.add_argument('--epoch', type=int)
 parser.add_argument('--only_val', type=int, default=0)
 parser.add_argument('--write_norm', type=boolean_string, default=False)
 parser.add_argument('--batch_size', type=int, default=100)
+parser.add_argument('--cross_val_genes', type=str, default='')
 opt = parser.parse_args()
 epoch = opt.epoch
 net_dir_p = opt.net_dir
@@ -49,14 +51,34 @@ isdebug = opt.isdebug
 only_val = opt.only_val
 write_norm = opt.write_norm
 batch_size = opt.batch_size
+cross_val_genes = opt.cross_val_genes
 
+dataset_config = DistGeneDataLoader.opt_from_config(data_config_p)
+dataset = DistGeneDataLoader(
+    dataset_config,
+    net_config_path=config_p,
+    use_net_experiments=True,
+    config_dict=dataset_config
+)
+if len(cross_val_genes):
+    with open(cross_val_genes, 'r') as f:
+        scheduler_data = json.load(f)
+    val_config_genes = scheduler_data['genes2cross_val']
+    print('USING CROSS VAL GENES, ONLY VAL MODE')
+    dataset.genes2train = []
+    dataset.genes2val = val_config_genes
+    debug(val_config_genes)
+    dataset._valexps2indxs = []
+    dataset._exps2indxs = []
+    dataset._warmupExps()
+    only_val = True
 train_data_loader, val_data_loader = DistGeneDataLoader.createDistLoader(
     data_config_p, 
     rank=0, 
     batch_size=batch_size, 
     gpus2use=1,
     num_workers=8,
-    dataset=None,
+    dataset=dataset,
     net_config_path=config_p,
     use_net_experiments=True,
     inference_mode=True
