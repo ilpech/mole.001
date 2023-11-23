@@ -32,6 +32,7 @@ class RegressionBioPerceptron(nn.Module):
             self.input_gene_seq_bow_len,
             self.input_features_hidden_size
         )
+        self.gene_seq_bn = nn.BatchNorm1d(self.input_features_hidden_size)
         
         self.linear_layer = nn.Linear(
             self.input_features_hidden_size * 3, 
@@ -55,8 +56,10 @@ class RegressionBioPerceptron(nn.Module):
         annotations_tensor = self.annotations_linear(annotations_tensor)
         
         type_ids_tensor = self.type_ids_linear(type_ids_tensor) #ne uvidel 
-        
+
         gene_seq_bow_tensor = self.gene_seq_linear(gene_seq_bow_tensor)
+        if gene_seq_bow_tensor.size()[0] != 1: # bn need more than 1 value per channel
+            gene_seq_bow_tensor = self.gene_seq_bn(self.activation(gene_seq_bow_tensor))
         
         all_inputs = torch.cat(
             (annotations_tensor, type_ids_tensor, gene_seq_bow_tensor), 1 #in original paper they also use rp_in
