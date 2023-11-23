@@ -27,7 +27,10 @@ import csv
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from torch_dl.dataloader.gene_batch_data_loader import BatchIterDistGeneDataLoader
+from torch_dl.dataloader.gene_batch_data_loader import (
+    BatchIterDistGeneDataLoader,
+    InferenceBatchGeneDataLoader
+)
 
 from typing import List
 import time
@@ -182,7 +185,8 @@ class DistGeneDataLoader(Dataset):
         num_workers=os.cpu_count()-1,
         dataset=None, # already used DistGeneDataLoader for fast changing of batch size
         net_config_path=None, # to fast load db mappings
-        use_net_experiments=False
+        use_net_experiments=False,
+        inference_mode=False
     ):
         """
         Creating dataset for training and validation
@@ -196,10 +200,18 @@ class DistGeneDataLoader(Dataset):
                 net_config_path,
                 use_net_experiments
             )
-        train_dataset = BatchIterDistGeneDataLoader(
-            dataset, 
-            'train'
-        )
+        if inference_mode:
+            train_dataset = InferenceBatchGeneDataLoader(
+                dataset, 
+                'train'
+            )
+            print('inference (train) dataloader created for rank {}'.format(rank))
+        else:
+            train_dataset = InferenceBatchGeneDataLoader(
+                dataset, 
+                'train'
+            )
+            print('train dataloader created for rank {}'.format(rank))
         # multi GPU sampler
         train_sampler = DistributedSampler(
             train_dataset, 
@@ -215,11 +227,18 @@ class DistGeneDataLoader(Dataset):
             sampler=train_sampler,
             # collate_fn=collate_fn 
         )
-        print('train dataloader created for rank {}'.format(rank))
-        val_dataset = BatchIterDistGeneDataLoader(
-            dataset,
-            'val'
-        )
+        if inference_mode:
+            val_dataset = InferenceBatchGeneDataLoader(
+                dataset,
+                'val'
+            )
+            print('inference (val) dataloader created for rank {}'.format(rank))
+        else:
+            val_dataset = BatchIterDistGeneDataLoader(
+                dataset,
+                'val'
+            )
+            print('val dataloader created for rank {}'.format(rank))
         # multi GPU sampler
         val_sampler = DistributedSampler(
             val_dataset, 
@@ -235,7 +254,6 @@ class DistGeneDataLoader(Dataset):
             sampler=val_sampler,
             # collate_fn=collate_fn 
         )
-        print('val dataloader created for rank {}'.format(rank))
         t2 = time.time()
         print('time passed {:.3f}'.format(t2-t1))
         return train_dataloader, val_dataloader
