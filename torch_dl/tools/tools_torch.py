@@ -76,8 +76,13 @@ def inspect_model(
     print('*' * 35)
     debug(model_params_cnt(model))
     print('*' * 35)
-    outs = model(sample_batch)
-    debug(sample_batch.shape)
+    if isinstance(sample_batch, tuple):
+        outs = model(*sample_batch)
+        for i, input_tensor in enumerate(sample_batch):
+            debug(input_tensor.shape, prefix=f'Input tensor {i} ::')
+    else:
+        outs = model(sample_batch)
+        debug(sample_batch.shape)
     if not isinstance(outs, list):
         outs = [outs]
     for i, out in enumerate(outs):
