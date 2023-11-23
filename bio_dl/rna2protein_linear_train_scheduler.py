@@ -177,6 +177,7 @@ class ModelsCohort:
             last_epoch = epochs_interval[0]
             remained_epochs = epochs_interval[1]
             train_settings['epochs'] = self.min_epochs2finish
+
             train_settings['params_dir'] = self.cohortDir()
             train_settings['net_name'] = model_name
 
@@ -193,6 +194,7 @@ class ModelsCohort:
                 #     config_dict=dataset_config,
                 #     force_run=False
                 # )
+
                 trainer = DistGeneLinearExpressionTrainer(
                     self.train_config_path,
                     isdebug=False,

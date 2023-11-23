@@ -16,14 +16,19 @@ data:
     # nci60: True
   # if maxGenesFromDataset == 0 load full dataset
   maxGenesFromDataset: 0
+  
   # tissue29_rna: ./bio_dl/testdata/tissue29.1k_rna.tsv
   # tissue29_prot: ./bio_dl/testdata/tissue29.1k_prot.tsv
-  tissue29_rna: ./bio_dl/testdata/tissue29_rna.tsv
-  tissue29_prot: ./bio_dl/testdata/tissue29_prot.tsv
-  # tissue29_rna: ./bio_dl/testdata/tissue29.005k_rna.tsv
-  # tissue29_prot: ./bio_dl/testdata/tissue29.005k_prot.tsv
+
+  # tissue29_rna: ./bio_dl/testdata/tissue29_rna.tsv
+  # tissue29_prot: ./bio_dl/testdata/tissue29_prot.tsv
+
+  tissue29_rna: ./bio_dl/testdata/tissue29.005k_rna.tsv
+  tissue29_prot: ./bio_dl/testdata/tissue29.005k_prot.tsv
+
   nci60_rna: ./bio_dl/testdata/nci60_rna.tsv
   nci60_prot: ./bio_dl/testdata/nci60_prot.tsv
+
   geneMapping: /home/gerzog/repositories/machine_learning/bio_dl/testdata/human_ids_mapping_2023_08_30.tab
   engs2uniprot_file: /home/gerzog/repositories/machine_learning/bio_dl/testdata/mapping_out/engs2uniprot_human_2023_08_30.txt
   splitGeneFromModelConfig: ./bio_dl/testdata/prot_abundance_regressor.full_tissue29_.2_val_config_NONORM.json
@@ -43,7 +48,7 @@ train:
   finetune_params_dir: /home/ilpech/repositories/mole.001/trained
   use_finetune_experiments: False
   use_finetune_databases: False
-  epoch_start_from: 2
+  epoch_start_from: 0
   epochs: 900
   log_interval: 3
   # metric_flush_interval: 500
@@ -101,7 +106,7 @@ train:
       gamma: 0.95
       
   batch_size:
-    0: 1000
+    0: 150
   augm:
     isEnabled: True
     epoch_p:

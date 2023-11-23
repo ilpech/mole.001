@@ -1,0 +1,14 @@
+# use false to disable setting
+cohortsToTrain:
+  rna2protein_tissue29.BioPerceptrone.mole_c001:
+    # baseConfigPath: config/gene_expression/train_tissue29_res34v2.yaml
+    baseConfigPath: config/gene_expression/train_linear_tissue29.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      # stableValidationPercent: 10
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    # use minEpochsToFinish = 0 to disable stop after n epoch 
+    minEpochsToFinish: 3
+  
