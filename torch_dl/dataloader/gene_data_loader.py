@@ -207,7 +207,7 @@ class DistGeneDataLoader(Dataset):
             )
             print('inference (train) dataloader created for rank {}'.format(rank))
         else:
-            train_dataset = InferenceBatchGeneDataLoader(
+            train_dataset = BatchIterDistGeneDataLoader(
                 dataset, 
                 'train'
             )
