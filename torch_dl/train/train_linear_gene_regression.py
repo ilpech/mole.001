@@ -70,9 +70,8 @@ class DistGeneLinearExpressionTrainer:
             self.config = config_dict
         else:
             self.config = DistGeneExpressionTrainer.opt_from_config(config_path)
-        self.isdebug = isdebug
-        with open(config_path) as f:
-            self.config = yaml.load(f, yaml.FullLoader)
+        # with open(config_path) as f:
+        #     self.config = yaml.load(f, yaml.FullLoader)
         self.start_time = curDateTime()
         self.config_path = config_path
         self.data_settings = self.config['data']
@@ -85,15 +84,17 @@ class DistGeneLinearExpressionTrainer:
         self.use_finetune_databases = self.train_settings['use_finetune_databases']
         self.params_dir = self.train_settings['params_dir']
         self.params_path = os.path.join(self.params_dir, self.net_name)
-        if os.path.isdir(self.params_path):
-            raise Exception(
-                'error! net out dir {} already exists, choose another net name'.format(
-                    self.params_path
-                ))
-        if not isdebug:
-            warnings.filterwarnings('ignore')
-            ensure_folder(self.params_path)
-            cp_r(self.config_path, self.params_path)
+        if force_run:
+            if os.path.isdir(self.params_path) and not isdebug:
+                raise Exception(
+                    'error! net out dir {} already exists, choose another net name'.format(
+                        self.params_path
+                    ))
+            if not isdebug:
+                warnings.filterwarnings('ignore')
+                ensure_folder(self.params_path)
+                cp_r(self.config_path, self.params_path)
+
         self.log_path = '{}/{}_log.txt'.format(self.params_path, self.net_name)
         self.gpus2use = self.train_settings['gpus2use']
         self.logger = TrainLogger(self.log_path, '[MAIN_GPUs::{}]'.format(self.gpus2use))
@@ -120,6 +121,7 @@ class DistGeneLinearExpressionTrainer:
         self.augm_settings = self.train_settings['augm']
         self.with_augm = self.augm_settings['isEnabled']
         self.epochs = self.train_settings['epochs']
+
         self.log_interval = self.train_settings['log_interval']
         self.metric_flush_interval = self.train_settings['metric_flush_interval']
         self.wd = self.train_settings['wd']
@@ -172,12 +174,17 @@ class DistGeneLinearExpressionTrainer:
                     'Error! dist train can not work without gpu, use usual train instead'
                 )
                 exit()
-        #=========DIST
-        if dist.is_available() and self.gpus2use > 0:
-            if not self.isdebug:
-                mp.spawn(self.train_loop, nprocs=self.gpus2use)
+        
         self.current_lr = None
         self.current_batch_size = None
+        
+        if force_run:
+            if self.gpus2use == 1 or self.isdebug:
+                self.train_loop()
+            # #=========DIST
+            elif dist.is_available() and self.gpus2use > 0:
+                print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
+                mp.spawn(self.train_loop, nprocs=self.gpus2use)
         
     def create_model(self, num_channels):
         '''
@@ -309,6 +316,7 @@ class DistGeneLinearExpressionTrainer:
         # model: TorchModel = self.create_model(
         #     num_channels=10
         # )
+        
         # inspect_model(
         #     model.model(),
         #     torch.zeros(size=inference_shape)
@@ -344,10 +352,11 @@ class DistGeneLinearExpressionTrainer:
         )
         
         if dist.is_available() and gpu_id >= 0:
-            dist_setup(gpu_id, self.dist_backend, self.gpus2use, port='6000')
             model._model.cuda(gpu_id)
             # wrap the model to current gpu
-            model._model = DDP(model._model, device_ids=[gpu_id])
+            if gpu_id > 0:
+                dist_setup(gpu_id, self.dist_backend, self.gpus2use)
+                model._model = DDP(model._model, device_ids=[gpu_id])
         else:
             print('train adopted only for gpu, exit...')
             exit()
