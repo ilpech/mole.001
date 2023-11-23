@@ -1,4 +1,5 @@
-#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/rna2protein_tissue29.ResNet34V2.005 --epoch 4 --data_config config/gene_expression/train_tissue29.yaml --only_val 1 --write_norm False
+#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/rna2protein_tissue29.ResNet34V2.005 --epoch 4 --data_config config/gene_expression/train_tissue29.yaml --only_val 1 --write_norm False --batch_size 100
+#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/cohorts/rna2protein_nci60.ResNet50V2.c001/rna2protein_nci60.ResNet50V2.c001.001 --epoch 4 --data_config config/gene_expression/train_nci60_res50v2.yaml --only_val 1 --write_norm False --batch_size 100
 import os
 import sys
 import numpy as np
@@ -25,6 +26,7 @@ from tools_dl.tools import (
     norm_shifted_log
 )
 import time
+from bio_dl.gene_mapping import uniq_nonempty_uniprot_mapping_header
 
 import argparse
 
@@ -37,6 +39,7 @@ parser.add_argument('--data_config', type=str)
 parser.add_argument('--epoch', type=int)
 parser.add_argument('--only_val', type=int, default=0)
 parser.add_argument('--write_norm', type=boolean_string, default=False)
+parser.add_argument('--batch_size', type=int, default=100)
 opt = parser.parse_args()
 epoch = opt.epoch
 net_dir_p = opt.net_dir
@@ -45,13 +48,23 @@ data_config_p = opt.data_config
 isdebug = opt.isdebug
 only_val = opt.only_val
 write_norm = opt.write_norm
+batch_size = opt.batch_size
 
-data_loader = DistGeneDataLoader(
+train_data_loader, val_data_loader = DistGeneDataLoader.createDistLoader(
     data_config_p, 
-    net_config_path=config_p
+    rank=0, 
+    batch_size=batch_size, 
+    gpus2use=1,
+    num_workers=8,
+    dataset=None,
+    net_config_path=config_p,
+    use_net_experiments=True,
+    inference_mode=True
 )
+
 with open(data_config_p, 'r') as f:
-    data_config_ = yaml.load(f)
+    # data_config_ = yaml.load(f)
+    data_config_ = yaml.load(f, Loader=yaml.SafeLoader)
     data_config = data_config_['data']
 
 params_path = os.path.split(config_p)[0]
@@ -64,20 +77,21 @@ num_layers = config['num_layers']
 out_dir = os.path.join(params_path, 'out', run_start)
 ensure_folder(out_dir)
 debug(config['model_name'])
+net_num_channels = len(uniq_nonempty_uniprot_mapping_header()) + 4
 if 'V2' not in config['model_name']:
     net = RegressionResNet2d34(
-        num_channels=10, 
+        num_channels=net_num_channels, 
         channels_width_modifier=width_factor
     )
 else:
     if num_layers == 34:
         net = RegressionResNet2dV2_34(
-            num_channels=10, 
+            num_channels=net_num_channels, 
             channels_width_modifier=width_factor
         )
     elif num_layers == 50:
         net = RegressionResNet2dV2_50(
-            num_channels=10, 
+            num_channels=net_num_channels, 
             channels_width_modifier=width_factor
         )
 model = TorchModel(
@@ -109,105 +123,137 @@ out_path = sample_path.format(
     epoch
 )
 
-genes_size = len(data_loader.genes())
+train_genes_size = len(train_data_loader.dataset.baseloader.genes2train)
+val_genes_size = len(val_data_loader.dataset.baseloader.genes2val)
+genes_size = train_genes_size + val_genes_size
 if only_val:
     print('only validation genes mode applied')
-    val_genes = [
-        x for x in val_config_genes if x in list(data_loader.genes().keys())
-    ]
     out_path = '{}/{}_{:04d}.val_metrics.txt'.format(
         out_dir, 
         net_name, 
         epoch
     )
-    genes_size = len(val_genes)
+    genes_size = val_genes_size
 print('genes', genes_size)
 print('data write to', out_path)
 print('process...')
+
 # create outfile and write header
 with open(out_path, 'w') as fv:
     fv.write('uid\trna_expt\trna_value\tprot_expt\tprot_value\tpredicted_prot_value\n')
 j = 0
 inference_start = time.time()
-sample_inference_ts = []
-model_inference_ts = []
-for uid, gene in data_loader.genes().items():
-    if only_val and uid not in val_genes:
-        continue
-    j += 1
-    # if j < 9000 or j > 10000:
-    #     continue
-    sys.stdout.write('\rgene {} of {}'.format(j, genes_size))
-    sys.stdout.flush()
-    for rna_exp in rna_alph:
-        prot_exp = rna_exp 
-        sample_inference = time.time()
-        try:
-            sample = data_loader.gene2sample(
-                uid,
-                data_loader.databases_alphs,
-                rna_exp,
-                prot_exp,
-                rna_alph,
-                prot_alph
-            )
-        except Exception as e:
-            print(str(e))
-            continue
-        if sample is None:
-            continue
-        ens = data_loader.uniprot2ensg(uid)
-        if not len(ens):
-            ens = ''
-        else:
-            ens = ens[0]
-        batch2inf = torch.Tensor(sample)
+batch_inference_ts = []
+batch_postprocess_ts = []
+calculated_sample_inference_ts = []
+
+dataloaders2process = [train_data_loader, val_data_loader]
+if only_val:
+    dataloaders2process = [val_data_loader]
+    
+for data_loader_i, data_loader in enumerate(dataloaders2process):
+    batch_passed = 0
+    batch_total_count = len(data_loader)
+    for batch, prot_vals, uids, rna_ids, prot_ids in data_loader:
+        batch_inference = time.time()
         if 'gpu' in ctx:
-            batch2inf = batch2inf.cuda()
-        batch2inf = batch2inf.unsqueeze(0)
-        # rna_expt_id = int(batch2inf[0][1].argmax(0)[0])
-        rna_value = gene.rna_measurements[rna_exp]
-        if prot_exp not in gene.protein_measurements:
-            continue
-        prot_value = gene.protein_measurements[prot_exp]
-        model_run_start = time.time()
-        out = model(batch2inf).detach().cpu()
-        model_inference_ts.append(
-            time.time() - model_run_start
+            batch = batch.cuda()
+        out = model(batch)
+        batch_inference_ts.append(
+            time.time() - batch_inference
         )
+        batch_postprocess = time.time()
         out = out.detach().cpu()
-        if not write_norm:
-            out = denorm_shifted_log(out[0]*max_label)
-        else:
-            prot_value = norm_shifted_log(prot_value)/max_label
-        sample_inference_ts.append(
-            time.time() - sample_inference
-        )
-        lo = [
-            uid, 
-            rna_exp, 
-            rna_value, 
-            prot_exp, 
-            prot_value, 
-            out
+        out = out.tolist()
+        norm_pred_prot_vals = [x[0] for x in out]
+        rna_exps = [
+            data_loader.dataset.baseloader.rnaMeasurementsAlphabet[x] for x in rna_ids
         ]
-        with open(out_path, 'a') as fv:
-            fv.write('{}\t{}\t{}\t{}\t{}\t{}\n'.format(
-                lo[0],lo[1],
-                lo[2],lo[3],
-                lo[4],lo[5]
-            ))
+        norm_rna_values = [
+            data_loader.dataset.baseloader._genes[uids[x]].get_RNA_experiment_value(
+                rna_exps[x], use_log_norm=True
+            ) for x in range(len(uids))
+        ]
+        prot_exps = [
+            data_loader.dataset.baseloader.proteinMeasurementsAlphabet[x] for x in prot_ids
+        ]
+        norm_prot_vals = [
+            data_loader.dataset.baseloader._genes[uids[x]].get_protein_experiment_value(
+                prot_exps[x], use_log_norm=True
+            ) for x in range(len(uids))
+        ]
+        rna_values2save = norm_rna_values
+        prot_values2save = norm_prot_vals
+        pred_prot_values2save = norm_pred_prot_vals
+        
+        if not write_norm:
+            denorm_pred_prot_vals = [denorm_shifted_log(x) for x in norm_pred_prot_vals]
+            denorm_rna_values = [
+                data_loader.dataset.baseloader._genes[uids[x]].get_RNA_experiment_value(
+                    rna_exps[x], use_log_norm=False
+                ) for x in range(len(uids))
+            ]
+            denorm_prot_values = [
+                data_loader.dataset.baseloader._genes[uids[x]].get_protein_experiment_value(
+                    prot_exps[x], use_log_norm=False
+                ) for x in range(len(uids))
+            ]
             
+            rna_values2save = denorm_rna_values
+            prot_values2save = denorm_prot_values
+            pred_prot_values2save = denorm_pred_prot_vals
+        
+        for i in range(len(uids)):
+            lo = [
+                uids[i], 
+                rna_exps[i], 
+                rna_values2save[i], 
+                prot_exps[i], 
+                prot_values2save[i], 
+                pred_prot_values2save[i]
+            ]
+            with open(out_path, 'a') as fv:
+                fv.write('{}\t{}\t{}\t{}\t{}\t{}\n'.format(
+                    lo[0],lo[1],
+                    lo[2],lo[3],
+                    lo[4],lo[5]
+                ))
+                
+        batch_postprocess_ts.append(
+            time.time() - batch_postprocess
+        )
+        calculated_sample_inference = (
+            (time.time() - batch_inference) / len(uids)
+        )
+        calculated_sample_inference_ts.append(calculated_sample_inference)
+        
+        batch_passed += 1
+        
+        sys.stdout.write('\rDL [ {}/{}] batch {} of {}'.format(
+            data_loader_i+1, len(dataloaders2process), 
+            batch_passed, batch_total_count
+        ))
+        sys.stdout.flush()
+        
 inference_time = time.time() - inference_start
-sample_inference_ts = np.array(sample_inference_ts)
-model_inference_ts = np.array(model_inference_ts)
+
+batch_inference_ts = np.array(batch_inference_ts)
+batch_postprocess_ts = np.array(batch_postprocess_ts)
+calculated_sample_inference_ts = np.array(calculated_sample_inference_ts)
+
 print('\ndata written to', out_path)
 print('======================')
 print('inference done in {:.3f} sec'.format(inference_time))
-print('average sample inference t {:.3f} sec'.format(
-    sample_inference_ts.mean())
+print('average calculated sample inference t {:.3f} sec'.format(
+    calculated_sample_inference_ts.mean())
 )
-print('average model inference t {:.3f} sec'.format(
-    model_inference_ts.mean())
+print('average batch [ bs:: {} ] inference t {:.3f} sec'.format(
+    batch_size, batch_inference_ts.mean())
+)
+print('average batch postprocess t {:.3f} sec'.format(
+    batch_postprocess_ts.mean())
+)
+print('total batch postprocess t {:.3f} sec'.format(
+    batch_postprocess_ts.sum())
 )
 print('======================')
