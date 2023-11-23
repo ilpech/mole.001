@@ -351,6 +351,16 @@ class DistGeneLinearExpressionTrainer:
             test_mode=self.isdebug
         )
         
+        inspect_model(
+            model.model(),
+            (
+                torch.zeros(1, annotations_len),
+                torch.zeros(1, len(data_loader.proteinMeasurementsAlphabet)),
+                torch.zeros(1, 1),
+                torch.zeros(1, len(Gene.proteinAminoAcidsAlphabet()))
+            )
+        )
+        
         if dist.is_available() and gpu_id >= 0:
             model._model.cuda(gpu_id)
             # wrap the model to current gpu

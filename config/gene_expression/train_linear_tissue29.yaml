@@ -20,11 +20,11 @@ data:
   # tissue29_rna: ./bio_dl/testdata/tissue29.1k_rna.tsv
   # tissue29_prot: ./bio_dl/testdata/tissue29.1k_prot.tsv
 
-  # tissue29_rna: ./bio_dl/testdata/tissue29_rna.tsv
-  # tissue29_prot: ./bio_dl/testdata/tissue29_prot.tsv
+  tissue29_rna: ./bio_dl/testdata/tissue29_rna.tsv
+  tissue29_prot: ./bio_dl/testdata/tissue29_prot.tsv
 
-  tissue29_rna: ./bio_dl/testdata/tissue29.005k_rna.tsv
-  tissue29_prot: ./bio_dl/testdata/tissue29.005k_prot.tsv
+  # tissue29_rna: ./bio_dl/testdata/tissue29.005k_rna.tsv
+  # tissue29_prot: ./bio_dl/testdata/tissue29.005k_prot.tsv
 
   nci60_rna: ./bio_dl/testdata/nci60_rna.tsv
   nci60_prot: ./bio_dl/testdata/nci60_prot.tsv
@@ -130,6 +130,8 @@ model:
     BioPerceptron:
       input_features_hidden_size: 40 
       hidden_size: 80
+      # input_features_hidden_size: 80
+      # hidden_size: 160
       annotations_dropout: 0.25
       hidden_dropout: 0.5
 

@@ -43,7 +43,7 @@ train:
   finetune_params_dir: /home/ilpech/repositories/mole.001/trained
   use_finetune_experiments: False
   use_finetune_databases: False
-  epoch_start_from: 2
+  epoch_start_from: 0
   epochs: 900
   log_interval: 3
   # metric_flush_interval: 500
@@ -101,7 +101,7 @@ train:
       gamma: 0.95
       
   batch_size:
-    0: 1000
+    0: 150
   augm:
     isEnabled: True
     epoch_p:
