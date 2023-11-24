@@ -4,7 +4,24 @@ from tools_dl.tools import shell
 import sys
 from subprocess import run, STDOUT, PIPE
 import yaml
+import json
 
+def net_dir_from_metric_path(metric_path):
+    head = metric_path
+    tail = None
+    while tail != 'out':
+        head, tail = os.path.split(head)
+    return head
+
+def determining_file_type_from_name(file_name):
+    file_name_parts = file_name.split('_')
+    file_type = file_name_parts[0]
+    for part in file_name_parts[1:]:
+        if part[0].isdigit():
+            break
+        else:
+            file_type += f'_{part}'
+    return file_type
 
 def cohort_inference(path2cohort):
     terminal_str2find = 'data written to '
@@ -65,19 +82,21 @@ def cohort_inference(path2cohort):
         inference_output_rows = inference_output.stdout.split('\n')
         for row in inference_output_rows:
             if terminal_str2find in row:
-                path2metrics = row.replace(terminal_str2find, '')
+                path2metrics = str(row.replace(terminal_str2find, ''))
                 net_name = os.path.splitext(
                     os.path.basename(path2metrics)
                 )[0]
                 
                 inferensed_nets.append(net_name)
                 metric_files.append(path2metrics)
-                
+
                 print(f'Inference finished for {net_name}')
                 
     return inferensed_nets, metric_files
 
 def metric_inference_cohort(path2cohort, inferensed_nets, metric_files, default_metric_config=None):
+    terminal_str2find = 'log file is opened at '
+    metric_files_dict = {}
     if default_metric_config is None:
         default_metric_config = 'config/metric_inferenced/metric_inferenced_cohort.yaml'
         
@@ -86,7 +105,7 @@ def metric_inference_cohort(path2cohort, inferensed_nets, metric_files, default_
     
     arr2file = []
     for i in range(len(metric_files)):
-        arr2file.append(f'#{inferensed_nets[i]}')
+        # arr2file.append(f'#{inferensed_nets[i]}')
         arr2file.append(metric_files[i])
     metric_inferenced_config['metric_files'] = arr2file
     
@@ -104,7 +123,7 @@ def metric_inference_cohort(path2cohort, inferensed_nets, metric_files, default_
         
     ##python3 bio_dl/metric_inferenced.py --config_path config/metric_inferenced/metric_inferenced.yaml
 
-    command2metric = f'bio_dl/metric_inferenced.py\
+    command2metric = f'python3 bio_dl/metric_inferenced.py\
         --config_path {metric_file}'
         
     metrics_inference_output = run(
@@ -113,17 +132,46 @@ def metric_inference_cohort(path2cohort, inferensed_nets, metric_files, default_
         stderr=STDOUT, 
         text=True
     )
-    print(metrics_inference_output)
+    metrics_inference_out = metrics_inference_output.stdout.split('\n')
+    for row in metrics_inference_out:
+        if terminal_str2find in row:
+            log_path = row.replace(terminal_str2find, '')
+            net_dir = net_dir_from_metric_path(log_path)
+            net_name = os.path.basename(net_dir)
+            file_type = determining_file_type_from_name(
+                os.path.basename(log_path)
+            )
+            if net_name not in metric_files_dict.keys():
+                metric_files_dict[net_name] = {}
+            metric_files_dict[net_name][file_type] = log_path
+    
+    return metric_files_dict
+        
+def cohort_models_and_metrics_inference(path2cohort):
+    cohort_name = os.path.basename(path2cohort)
+    print(f'Start inference process for {cohort_name} cohort...')
+    # inferensed_nets, metric_files = cohort_inference(path2cohort=path2cohort)
+    
+    inferensed_nets = ['rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics', 'rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics']
+    metric_files = [
+        '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.001/out/2023.11.24.19.32.59/rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics.txt', 
+        '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.002/out/2023.11.24.19.36.03/rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics.txt'                 
+    ]
+    metric_cohort_dict = metric_inference_cohort(
+        path2cohort=path2cohort,
+        inferensed_nets=inferensed_nets,
+        metric_files=metric_files
+    )
+    path2cohort_json = os.path.join(
+        path2cohort,
+        f'{cohort_name}_metrics.json'
+    )
+    with open(path2cohort_json, 'w') as f:
+        json.dump(metric_cohort_dict, f, indent=4)
+    print(f'Metrics paths for {cohort_name} saved to {path2cohort_json}')
+
     
     
-    
-                
-        
-                
-        
-    # with open('test_cohort_inference.txt', 'w') as sf:
-    #     sf.writelines(metric_files)
-        
         
 if __name__ == '__main__':
     # path2cohort = 'trained/cohorts/rna2protein_nci60.BioPerceptrone.mole_c001'
@@ -132,15 +180,7 @@ if __name__ == '__main__':
     # path2cohort = '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c001'
     # path2cohort = 'trained/cohorts2test/rna2protein_tissue29.BioPerceptrone.mole_c003'
     path2cohort = 'trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001'
-    inferensed_nets, metric_files = cohort_inference(path2cohort=path2cohort)
-    print(inferensed_nets)
-    print(metric_files)
-    
-    metric_inference_cohort(
-        path2cohort=path2cohort,
-        inferensed_nets=inferensed_nets,
-        metric_files=metric_files
-    )
+    cohort_models_and_metrics_inference(path2cohort)
 
 
 

@@ -1,0 +1,5 @@
+cohorts_paths: [
+  /home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c001,
+]
+
+batch_size: 128
