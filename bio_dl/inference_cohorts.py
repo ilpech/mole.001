@@ -5,6 +5,7 @@ import sys
 from subprocess import run, STDOUT, PIPE
 import yaml
 import json
+import argparse
 
 def net_dir_from_metric_path(metric_path):
     head = metric_path
@@ -23,7 +24,7 @@ def determining_file_type_from_name(file_name):
             file_type += f'_{part}'
     return file_type
 
-def cohort_inference(path2cohort):
+def cohort_inference(path2cohort, batch_size):
     terminal_str2find = 'data written to '
     inferensed_nets = []
     metric_files = []
@@ -62,14 +63,16 @@ def cohort_inference(path2cohort):
             --data_config {}\
             --only_val 1\
             --write_norm False\
-            --batch_size 32\
+            --batch_size {}\
             --cross_val_genes {}'.format(
                 model.net_dir(),
                 model.bestEpochFromLog()[1],
                 data_config_path,
+                batch_size,
                 cross_val
             )
-        
+        print(f'    Start inference for {model_name}...')
+        # print(inference_command2shell)
         # write inference output to inference_output variable
         inference_output = run(
             inference_command2shell.split(), 
@@ -147,16 +150,16 @@ def metric_inference_cohort(path2cohort, inferensed_nets, metric_files, default_
     
     return metric_files_dict
         
-def cohort_models_and_metrics_inference(path2cohort):
+def cohort_models_and_metrics_inference(path2cohort, batch_size):
     cohort_name = os.path.basename(path2cohort)
-    print(f'Start inference process for {cohort_name} cohort...')
-    # inferensed_nets, metric_files = cohort_inference(path2cohort=path2cohort)
-    
-    inferensed_nets = ['rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics', 'rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics']
-    metric_files = [
-        '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.001/out/2023.11.24.19.32.59/rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics.txt', 
-        '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.002/out/2023.11.24.19.36.03/rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics.txt'                 
-    ]
+    print(f'Start inference process for {cohort_name} cohort...\n')
+    inferensed_nets, metric_files = cohort_inference(path2cohort=path2cohort, batch_size=batch_size)
+    print(inferensed_nets, metric_files)
+    # inferensed_nets = ['rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics', 'rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics']
+    # metric_files = [
+    #     '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.001/out/2023.11.24.19.32.59/rna2protein_nci60.ResNet26V2.c001.001_0002.val_metrics.txt', 
+    #     '/home/gerzog/repositories/mole.001/trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001/rna2protein_nci60.ResNet26V2.c001.002/out/2023.11.24.19.36.03/rna2protein_nci60.ResNet26V2.c001.002_0001.val_metrics.txt'                 
+    # ]
     metric_cohort_dict = metric_inference_cohort(
         path2cohort=path2cohort,
         inferensed_nets=inferensed_nets,
@@ -168,19 +171,28 @@ def cohort_models_and_metrics_inference(path2cohort):
     )
     with open(path2cohort_json, 'w') as f:
         json.dump(metric_cohort_dict, f, indent=4)
-    print(f'Metrics paths for {cohort_name} saved to {path2cohort_json}')
+    print(f'Metrics paths for {cohort_name} saved to {path2cohort_json}\n')
 
+
+def cohorts_inference_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--cohorts_config')
     
-    
+    opt = parser.parse_args()
+    path2config = opt.cohorts_config
+    with open(path2config, 'r') as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
         
+    cohorts_paths = config['cohorts_paths']
+    batch_size = config['batch_size']
+    
+    for cohort_path in cohorts_paths:
+        cohort_models_and_metrics_inference(cohort_path, batch_size)
+        
+    
 if __name__ == '__main__':
-    # path2cohort = 'trained/cohorts/rna2protein_nci60.BioPerceptrone.mole_c001'
-    # path2cohort = 'trained/cohorts/rna2protein_tissue29.BioPerceptrone.mole_c003'
-    # path2cohort = 'trained/cohorts/rna2protein_nci60.BioPerceptrone.mole_c003'
-    # path2cohort = '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c001'
-    # path2cohort = 'trained/cohorts2test/rna2protein_tissue29.BioPerceptrone.mole_c003'
-    path2cohort = 'trained/cohorts2test/rna2protein_nci60.ResNet26V2.c001'
-    cohort_models_and_metrics_inference(path2cohort)
+    cohorts_inference_main()
+    
 
 
 
