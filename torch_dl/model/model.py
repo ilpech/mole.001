@@ -200,6 +200,9 @@ class TorchModel:
 
     def pt_dir(self):
         return os.path.join(self.net_dir(), self.net_name)
+    
+    def log_path(self):
+        return os.path.join(self.net_dir(), f'{self.net_name}_log.txt')
         
     def load(self, ctx='cpu'):
         if self._model is None:
@@ -366,6 +369,36 @@ class TorchModel:
             return None
         return epochs[-1]
     
+    
+    def bestEpochFromLog(self, non_zero=True):
+        metric2checkstr = '|  (val)::P^2_norm_metric::'
+        with open(self.log_path(), 'r') as f:
+            log_data = f.readlines()
+        f.close()
+        epochs = []
+        p2_metric_vals = []
+        
+        for row in log_data:
+            if '[Epoch::' in row:
+                epoch = int(row[8:11])
+                epochs.append(epoch)
+            if metric2checkstr in row:
+                row.replace('\n', '')
+                val = float(row.replace(
+                    metric2checkstr, ''
+                ))
+                p2_metric_vals.append(val)
+        
+        # we cannot use 0 epoch
+        if non_zero:
+            epochs = epochs[1:]
+            p2_metric_vals = p2_metric_vals[1:]
+            
+        best_val = max(p2_metric_vals)
+        best_epoch = epochs[p2_metric_vals.index(best_val)]
+        return best_val, best_epoch
+    
+    
 def export_regression():
     from torch_dl.model.regression_model import RegressionResNet2d18 
     sample = torch.randn((1,10,256,20))
@@ -377,6 +410,7 @@ def export_regression():
     )
     debug(model.get_n_params())
     # model.exportEpochs('trained/2export/', [10, 55, 80])
+
             
             
 if __name__ == '__main__':
