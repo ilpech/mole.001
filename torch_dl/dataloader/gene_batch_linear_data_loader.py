@@ -28,7 +28,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
         net_config_path=None, # to fast load db mappings,
         use_net_experiments=False,
         use_net_databases=True,
-        crop_db_alph=True
+        crop_db_alph=True,
+        is_inference=False
     ):
         """
         Creating dataset for training and validation
@@ -46,7 +47,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
             )
         train_dataset = TrainGeneLinearDataLoader(
             dataset, 
-            'train'
+            'train',
+            is_inference
         )
         # multi GPU sampler
         train_sampler = DistributedSampler(
@@ -66,7 +68,8 @@ class GeneLinearDataLoader(DistGeneDataLoader):
         print('createDistLoader::train dataloader created for rank {}'.format(rank))
         val_dataset = TrainGeneLinearDataLoader(
             dataset,
-            'val'
+            'val',
+            is_inference
         )
         # multi GPU sampler
         val_sampler = DistributedSampler(
@@ -174,11 +177,13 @@ class TrainGeneLinearDataLoader(DataLoader):
     def __init__(
         self, 
         baseloader, 
-        mode='train'
+        mode='train',
+        is_inference=False
     ):
         self.baseloader = baseloader
         self.mode = mode
         self.max_label = baseloader.max_label
+        self.is_inference = is_inference
     
     def __len__(self):
         """
@@ -222,5 +227,8 @@ class TrainGeneLinearDataLoader(DataLoader):
         label = norm_shifted_log(
             gene.protein_measurements[prot_exp]
         )/self.max_label
-        return annotations, type_one_hot, norm_rna_val, gene_seq_bow, label
+        if not self.is_inference:
+            return annotations, type_one_hot, norm_rna_val, gene_seq_bow, label
+        if self.is_inference:
+            return annotations, type_one_hot, norm_rna_val, gene_seq_bow, uid, rna_id, prot_id, label
 
