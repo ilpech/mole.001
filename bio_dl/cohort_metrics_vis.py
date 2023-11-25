@@ -117,13 +117,26 @@ def cohort_mean_table_tissues_metric_metrics(path2config, is_debug=False):
         else:
             cohort_mean_metrics_dict[k] = v
     if is_debug:
+        header = ['Net name', 'min P^2', 'mean P^2', 'median P^2','max P^2']
+        header[0] += (50 - len(header[0])) * ' '
+        info = 121*'-'
+        info += '\n' 
+        header_row = '|'
+        for i in range(len(header)):
+            header_row += f' {header[i]} \t|'
+        info += header_row + '\n'
+        info += 121*'-'
+        info += '\n' 
         for k , v in cohort_mean_metrics_dict.items():
             cohortname2print = k + ((50-len(k))*' ')
-            info = '{} \t| min:: {:.03f} \t| mean:: {:.03f} \t| median:: {:.03f} \t| max:: {:.03f}'.format(
+            row_info = '| {} \t| {:.03f} \t| {:.03f} \t| {:.03f} \t| {:.03f} \t|\n'.format(
                 cohortname2print,
                 np.min(v), np.mean(v), np.median(v), np.max(v)
             )
-            print(info, '\n', (len(info)+10)*'-')
+            info += row_info
+            info += 121*'-'
+            info += '\n' 
+        print(info)
     return cohort_mean_metrics_dict
 
 
