@@ -393,6 +393,9 @@ class TorchModel:
         if non_zero:
             epochs = epochs[1:]
             p2_metric_vals = p2_metric_vals[1:]
+        if len(p2_metric_vals) == 0:
+            print(f'{self.net_name} have not best epochs...')
+            exit()
             
         best_val = max(p2_metric_vals)
         best_epoch = epochs[p2_metric_vals.index(best_val)]

@@ -65,49 +65,51 @@ def cohort_inference(path2cohort, batch_size):
             '{}'.format(path2cohort),
             '{}_val_scheduler_genes.json'.format(model_name)
         )
-        
-        # concatenate command for model inference
-        inference_command2shell = 'python3 bio_dl/{} \
-            --isdebug 0\
-            --net_dir {}\
-            --epoch {}\
-            --data_config {}\
-            --only_val 1\
-            --write_norm False\
-            --batch_size {}\
-            --cross_val_genes {}'.format(
-                python_file,
-                model.net_dir(),
-                model.bestEpochFromLog()[1],
-                data_config_path,
-                batch_size,
-                cross_val
+        try: 
+            # concatenate command for model inference
+            inference_command2shell = 'python3 bio_dl/{} \
+                --isdebug 0\
+                --net_dir {}\
+                --epoch {}\
+                --data_config {}\
+                --only_val 1\
+                --write_norm False\
+                --batch_size {}\
+                --cross_val_genes {}'.format(
+                    python_file,
+                    model.net_dir(),
+                    model.bestEpochFromLog()[1],
+                    data_config_path,
+                    batch_size,
+                    cross_val
+                )
+            print(f'    Start inference for {model_name}...')
+            # print(inference_command2shell)
+            # write inference output to inference_output variable
+            inference_output = run(
+                inference_command2shell.split(), 
+                stdout=PIPE, 
+                stderr=STDOUT, 
+                text=True
             )
-        print(f'    Start inference for {model_name}...')
-        # print(inference_command2shell)
-        # write inference output to inference_output variable
-        inference_output = run(
-            inference_command2shell.split(), 
-            stdout=PIPE, 
-            stderr=STDOUT, 
-            text=True
-        )
-        
-        # parse inference_output
-        inference_output_rows = inference_output.stdout.split('\n')
-        for row in inference_output_rows:
-            if terminal_str2find in row:
-                path2metrics = str(row.replace(terminal_str2find, ''))
-                net_name = os.path.splitext(
-                    os.path.basename(path2metrics)
-                )[0]
-                
-                inferensed_nets.append(net_name)
-                metric_files.append(path2metrics)
+            
+            # parse inference_output
+            inference_output_rows = inference_output.stdout.split('\n')
+            for row in inference_output_rows:
+                if terminal_str2find in row:
+                    path2metrics = str(row.replace(terminal_str2find, ''))
+                    net_name = os.path.splitext(
+                        os.path.basename(path2metrics)
+                    )[0]
+                    
+                    inferensed_nets.append(net_name)
+                    metric_files.append(path2metrics)
 
-                print(f'    Inference finished for {model_name}')
-                print(f'    Result saved to {path2metrics}')
-                print('   ', 30*'=')
+                    print(f'    Inference finished for {model_name}')
+                    print(f'    Result saved to {path2metrics}')
+                    print('   ', 30*'=')
+        except:
+            continue
                 
     return inferensed_nets, metric_files
 
