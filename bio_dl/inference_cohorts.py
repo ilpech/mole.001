@@ -1,3 +1,5 @@
+#python3 bio_dl/inference_cohorts.py --cohorts_config config/cohort_gene_expression/cohort_gene_expression.yaml
+
 import os
 from bio_dl.rna2protein_train_scheduler import ModelsCohort
 from tools_dl.tools import shell
