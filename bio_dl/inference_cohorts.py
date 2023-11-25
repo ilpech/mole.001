@@ -44,11 +44,20 @@ def cohort_inference(path2cohort, batch_size):
     #python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003 --epoch 2 --data_config config/gene_expression/train_tissue29_res50v2.yaml --only_val 1 --write_norm False --batch_size 8 --cross_val_genes trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003_val_scheduler_genes.json
 
     for model_name, model in models_cohort.models.items():
-        # print(model_name, model.bestEpochFromLog())
+        is_model_linear = False
+        python_file = 'inference_gene_regressor.py'
+        if 'BioPerceptron' in model_name:
+            python_file = 'inference_gene_regressor_linear.py'
+            is_model_linear = True
+
         if 'tissue29' in model_name:
             data_config_path = 'config/gene_expression/train_tissue29.yaml'
+            if is_model_linear:
+                data_config_path = 'config/gene_expression/train_linear_tissue29.yaml'
         if 'nci60' in model_name:
             data_config_path = 'config/gene_expression/train_nci60.yaml'
+            if is_model_linear:
+                data_config_path = 'config/gene_expression/train_linear_nci60.yaml'
 
         cross_val = os.path.join(
             '{}'.format(path2cohort),
@@ -56,7 +65,7 @@ def cohort_inference(path2cohort, batch_size):
         )
         
         # concatenate command for model inference
-        inference_command2shell = 'python3 bio_dl/inference_gene_regressor.py \
+        inference_command2shell = 'python3 bio_dl/{} \
             --isdebug 0\
             --net_dir {}\
             --epoch {}\
@@ -65,6 +74,7 @@ def cohort_inference(path2cohort, batch_size):
             --write_norm False\
             --batch_size {}\
             --cross_val_genes {}'.format(
+                python_file,
                 model.net_dir(),
                 model.bestEpochFromLog()[1],
                 data_config_path,
@@ -93,7 +103,9 @@ def cohort_inference(path2cohort, batch_size):
                 inferensed_nets.append(net_name)
                 metric_files.append(path2metrics)
 
-                print(f'Inference finished for {net_name}')
+                print(f'    Inference finished for {model_name}')
+                print(f'    Result saved to {path2metrics}')
+                print('   ', 30*'=')
                 
     return inferensed_nets, metric_files
 
