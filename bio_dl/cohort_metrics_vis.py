@@ -5,10 +5,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+from bio_dl.rna2protein_train_scheduler import ModelsCohort
 
 
 def metrics2vis_dict_from_path2config(path2config, metric2compare):
-    metric2compare = 'table_tissues_metric'
     metrics2vis = {}
     with open(path2config, 'r') as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
@@ -92,21 +92,21 @@ def cohort_violins_from_path2config(path2config, outpath):
     
 def cohort_metrics(path2config, metric2compare):
     metrics2vis = metrics2vis_dict_from_path2config(path2config, metric2compare)
-    cohort_mean_metrics_dict = {} 
+    cohort_metrics_dict = {} 
     for cohort_name in metrics2vis.keys():
-        cohort_mean_metrics_dict[cohort_name] = None
+        cohort_metrics_dict[cohort_name] = None
         # print(cohort_name)
         for model in metrics2vis[cohort_name].keys():
             model_values = metrics2vis[cohort_name][model]
             model_values_np = np.array(model_values)
-            if cohort_mean_metrics_dict[cohort_name] is None:
-                cohort_mean_metrics_dict[cohort_name] = model_values_np
+            if cohort_metrics_dict[cohort_name] is None:
+                cohort_metrics_dict[cohort_name] = model_values_np
             else:
-                cohort_mean_metrics_dict[cohort_name] = np.vstack([
-                    cohort_mean_metrics_dict[cohort_name],
+                cohort_metrics_dict[cohort_name] = np.vstack([
+                    cohort_metrics_dict[cohort_name],
                     model_values_np
                 ])
-    return cohort_mean_metrics_dict
+    return cohort_metrics_dict
 
 def cohort_mean_table_tissues_metric_metrics(path2config, is_debug=False):
     cohort_metrics_dict = cohort_metrics(path2config, 'table_tissues_metric')
@@ -140,6 +140,41 @@ def cohort_mean_table_tissues_metric_metrics(path2config, is_debug=False):
     return cohort_mean_metrics_dict
 
 
+def cohort_mean_table_metric(path2config, is_debug=False):
+    cohort_metrics_dict = cohort_metrics(path2config, 'table_metric')
+    cohort_mean_metrics_dict = {}
+    for k, v in cohort_metrics_dict.items():
+        if len(v.shape) == 2:
+            cohort_mean_metrics_dict[k] = np.mean(v, axis=0)
+        else:
+            cohort_mean_metrics_dict[k] = v
+    if is_debug:
+        header = ['Net name', 'Genes_cnt', 'Experiments', 'R^2', 'Spearman']
+        header[0] += (50 - len(header[0])) * ' '
+        info = 121*'-'
+        info += '\n' 
+        header_row = '|'
+        for i in range(len(header)):
+            header_row += f' {header[i]} \t|'
+        info += header_row + '\n'
+        info += 121*'-'
+        info += '\n' 
+        for k , v in cohort_mean_metrics_dict.items():
+            cohortname2print = k + ((50-len(k))*' ')
+            row_info = '| {} \t| {:.03f} \t| {:.03f} \t| {:.03f} \t| {:.03f} \t|\n'.format(
+                cohortname2print,
+                cohort_mean_metrics_dict[k][0],
+                cohort_mean_metrics_dict[k][1],
+                cohort_mean_metrics_dict[k][2],
+                cohort_mean_metrics_dict[k][3],
+            )
+            info += row_info
+            info += 121*'-'
+            info += '\n' 
+        print(info)
+    return cohort_mean_metrics_dict
+
+
 def cohort_mean_violin(cohort_mean_metrics_dict, outpath):
     all_values = []
     for cohort_name in cohort_mean_metrics_dict.keys():
@@ -152,9 +187,7 @@ def cohort_mean_violin(cohort_mean_metrics_dict, outpath):
     uniq_vals_np = np.concatenate([uniq_vals_np, np.array([0, 1])]) 
     # uniq_vals_mapped = np.array(uniq_vals) / max(uniq_vals)
     uniq_vals_mapped = np.interp(uniq_vals_np, (uniq_vals_np.min(), uniq_vals_np.max()), (0, 1))
-    # uniq_vals_mapped *= 0.5
-    # print(uniq_vals_mapped)
-    # exit()
+
     color_map = plt.get_cmap('viridis')(uniq_vals_mapped)
     color_map = color_map[:, :3]
     width = len(cohort_mean_metrics_dict.keys())
@@ -175,8 +208,6 @@ def cohort_mean_violin(cohort_mean_metrics_dict, outpath):
         color_hex = mpl.colors.to_hex(color_rgb, keep_alpha=False)
         for pc in parts['bodies']:
             pc.set_facecolor(color_hex)
-            # pc.set_facecolor('#D43F3A')
-            # pc.set_facecolor('#D91C9B')
             pc.set_edgecolor('black')
             pc.set_alpha(1)
         
@@ -190,11 +221,41 @@ def cohort_mean_violin(cohort_mean_metrics_dict, outpath):
     fig.tight_layout(pad=2, h_pad=1, w_pad=2)
     plt.savefig(outpath, dpi=1024)
     
-    # print(cohort_mean_metrics_dict)
+
+def cohort_mean_table_metric_and_stable_val(path2config):
+    # mean_table_metric = cohort_mean_table_metric(path2config, is_debug=False)
+    
+    with open(path2config, 'r') as cf:
+        config = yaml.load(cf, Loader=yaml.SafeLoader)
+    cohorts2process = config['cohorts_paths']
+    print(cohorts2process)
+    for cohort_path in cohorts2process:
+        params_dir, cohort_name = os.path.split(cohort_path)
+        models_cohort = ModelsCohort(
+            cohort_name,
+            params_dir=params_dir,
+            cohort_size=1,
+            min_epochs2finish=1,
+            stable_validataion_genes_path=None,
+            train=False,
+            train_config_path=None,
+            isdebug=True
+        )
+        
+        for model_name, model in models_cohort.models.items():
+            print(model.net_name)
+            print(model.bestEpochFromLog())
+            print()
+    
+    # print(mean_table_metric)
+    
     
 
 
 
 path2config = '/home/gerzog/repositories/mole.001/config/cohort_gene_expression/cohort_gene_expression.yaml'
-mean_vals_dict = cohort_mean_table_tissues_metric_metrics(path2config, is_debug=True)
+# cohort_violins_from_path2config(path2config, 'compare_cohorts.png')
+# mean_vals_dict = cohort_mean_table_tissues_metric_metrics(path2config, is_debug=True)
+
+overall_vals_dict = cohort_mean_table_metric_and_stable_val(path2config)
 # cohort_mean_violin(mean_vals_dict, 'test_cohort_mean_violin.png')
