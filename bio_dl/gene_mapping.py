@@ -1,5 +1,6 @@
 import os 
 import gzip
+import collections
 
 class GenesMapping:
     """
@@ -87,7 +88,7 @@ def uniq_nonempty_uniprot_mapping_header():
         'RefSeq',
         'MIM',
         'PubMed',
-        'Ensembl_PRO',
+        # 'Ensembl_PRO',
         'PDB',
     ]
     
@@ -112,6 +113,34 @@ def mapping2dict(path):
         out[main_name] = data
     return out
 
+
+def db_n_most_common_annotations(mappings_dict, max_size, db_names2process=None):
+    if db_names2process is None:
+        db_names2process = list(list(mappings_dict.values())[0].keys())
+    
+    dbs_genes_annotations = dict.fromkeys(db_names2process)
+    dbs_most_common_annotations = dict.fromkeys(db_names2process)
+    for uid_annotations in mappings_dict.values():
+        for db_name in db_names2process:
+            db_uid_data = uid_annotations[db_name]
+            if dbs_genes_annotations[db_name] is None:
+                dbs_genes_annotations[db_name] = db_uid_data
+            else:
+                dbs_genes_annotations[db_name] += db_uid_data
+        
+    for db_name, db_genes_annotations in dbs_genes_annotations.items():
+        unique_annotations_count = collections.Counter(db_genes_annotations)
+        sorted_unique_annotations_count = dict(
+            sorted(
+                unique_annotations_count.items(), 
+                key=lambda item: item[1]
+            )
+        )
+        sorted_unique_annotations = list(sorted_unique_annotations_count.keys())
+        dbs_most_common_annotations[db_name] = sorted_unique_annotations[-max_size::1]
+    return dbs_most_common_annotations
+    
+        
 def rewrite_mapping_with_ids(
     path, 
     uniprot_ids,

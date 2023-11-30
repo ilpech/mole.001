@@ -1,0 +1,16 @@
+cohorts_paths: [
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c005', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c002', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c003', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_tissue29.ResNet34V1.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet26V2.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_tissue29.ResNet50V2.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet34V1.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_tissue29.ResNet26V2.c001', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c002', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c004', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c003', 
+  '/home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_nci60.ResNet50V2.c006'
+]
+batch_size: 32

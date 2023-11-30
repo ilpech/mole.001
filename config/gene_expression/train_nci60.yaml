@@ -1,6 +1,7 @@
 # use false to disable setting
 data:
-  cashPath: ./bio_dl/cash/dataloader
+  cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
+  apiUniprotOutDir: /home/gerzog/repositories/machine_learning/bio_dl/testdata/api_out
   datasets2use:
     # tissue29: True
     # tissue13: True
@@ -14,8 +15,8 @@ data:
   tissue13_prot: ./bio_dl/testdata/tissue13_prot.tsv
   nci60_rna: ./bio_dl/testdata/nci60_rna.tsv
   nci60_prot: ./bio_dl/testdata/nci60_prot.tsv
-  geneMapping: ./bio_dl/testdata/human_ids_mapping.tab
-  engs2uniprot_file: ./bio_dl/testdata/mapping_out/engs2uniprot_human.txt
+  geneMapping: /home/gerzog/repositories/machine_learning/bio_dl/testdata/human_ids_mapping_2023_08_30.tab
+  engs2uniprot_file: /home/gerzog/repositories/machine_learning/bio_dl/testdata/mapping_out/engs2uniprot_human_2023_08_30.txt
   skipMissing: False
   splitGeneFromModelConfig: ./bio_dl/testdata/prot_abundance_regressor.full_tissue29_.2_val_config_NONORM.json
   # splitGeneFromModelConfig: False

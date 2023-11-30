@@ -100,8 +100,8 @@ train:
       10: 0.8
 model:
     model2use: [
-      # wideResNet,
-      ResNetV2
+      wideResNet,
+      # ResNetV2
     ]
     wideResNet:
       num_layers: 34

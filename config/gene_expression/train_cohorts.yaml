@@ -1,0 +1,66 @@
+# use false to disable setting
+cohortsToTrain:
+  # here any cohort name 
+  # ==================================
+  # ======TISSUE29
+  # ==================================
+  rna2protein_tissue29.ResNet26V2.c001:
+    baseConfigPath: config/gene_expression/train_tissue29_res34v2.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      # stableValidationPercent: 10
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    # use minEpochsToFinish = 0 to disable stop after n epoch 
+    minEpochsToFinish: 3
+  # ==================================
+  rna2protein_tissue29.ResNet50V2.c001:
+    baseConfigPath: config/gene_expression/train_tissue29_res50v2.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    minEpochsToFinish: 3
+  # ==================================
+  rna2protein_tissue29.ResNet34V1.c001:
+    baseConfigPath: config/gene_expression/train_tissue29_res34v1.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    minEpochsToFinish: 3
+  # ==================================
+  # ======NCI60
+  # ==================================
+  rna2protein_nci60.ResNet26V2.c001:
+    baseConfigPath: config/gene_expression/train_nci60_res34v2.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      # stableValidationPercent: 10
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    # use minEpochsToFinish = 0 to disable stop after n epoch 
+    minEpochsToFinish: 3
+  # ==================================
+  rna2protein_nci60.ResNet50V2.c001:
+    baseConfigPath: config/gene_expression/train_nci60_res50v2.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    minEpochsToFinish: 3
+  # ==================================
+  rna2protein_nci60.ResNet34V1.c001:
+    baseConfigPath: config/gene_expression/train_nci60_res34v1.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    minEpochsToFinish: 3
+ 

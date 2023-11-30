@@ -63,17 +63,17 @@ class Gene:
             'S', 'T', 'U', 'V', 'W', 'Y'
         ])
     
-    def apiData(self):
-        return getGeneFromApi(self.id())
+    def apiData(self, outdir):
+        return getGeneFromApi(self.id(), outdir)
     
-    def apiSequence(self):
-        return sequence(self.id())
+    def apiSequence(self, outdir):
+        return sequence(self.id(), outdir)
     
-    def apiSeqOneHot(self):
+    def apiSeqOneHot(self, outdir):
         """
         One hot coding of aminoacids sequence
         """
-        return Gene.seq2oneHot(self.apiSequence())
+        return Gene.seq2oneHot(self.apiSequence(outdir))
     
     @staticmethod
     def seq2oneHot(seq):
@@ -99,3 +99,16 @@ class Gene:
             debug(len(seq))
             return None
         
+    def apiSeqBagOfWord(self, outdir):
+        return Gene.seq2bagOfWord(self.apiSequence(outdir))
+    
+    @staticmethod
+    def seq2bagOfWord(seq):
+        """
+        Bag of words coding of aminoacids sequence
+        """
+        alphabet = Gene.proteinAminoAcidsAlphabet()
+        bag_of_word = [seq.count(x) for x in alphabet]
+        return np.array(bag_of_word, dtype=np.float32)
+        
+    

@@ -1,6 +1,6 @@
-#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/rna2protein_tissue29.ResNet34V2.005 --epoch 4 --data_config config/gene_expression/train_tissue29.yaml --only_val 1 --write_norm False --batch_size 100
+#python3 bio_dl/inference_gene_regressor_linear.py --isdebug 0 --net_dir trained/rna2protein_tissue29.ResNet34V2.005 --epoch 4 --data_config config/gene_expression/train_tissue29.yaml --only_val 1 --write_norm False --batch_size 100
 #cross val
-#python3 bio_dl/inference_gene_regressor.py --isdebug 0 --net_dir trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003 --epoch 2 --data_config config/gene_expression/train_tissue29_res50v2.yaml --only_val 1 --write_norm False --batch_size 8 --cross_val_genes trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003_val_scheduler_genes.json
+#python3 bio_dl/inference_gene_regressor_linear.py --isdebug 0 --net_dir trained/cohorts/rna2protein_nci60.BioPerceptrone.mole_c003/rna2protein_nci60.BioPerceptrone.mole_c003.005 --epoch 1 --data_config config/gene_expression/train_nci60.yaml --only_val 1 --write_norm False --batch_size 8 --cross_val_genes trained/cohorts/rna2protein_nci60.BioPerceptrone.mole_c003/rna2protein_nci60.BioPerceptrone.mole_c003.005_val_scheduler_genes.json
 import os
 import sys
 import numpy as np
@@ -8,12 +8,9 @@ import torch
 from torch_dl.tools.tools_torch import isGPU
 from torch_dl.model.model import TorchModel
 from torch_dl.dataloader.gene_data_loader import DistGeneDataLoader
-from torch_dl.model.regression_model import (
-    RegressionResNet2d18,
-    RegressionResNet2d34,
-    RegressionResNet2dV2_34,
-    RegressionResNet2dV2_50
-)
+from torch_dl.dataloader.gene_batch_linear_data_loader import GeneLinearDataLoader
+
+from torch_dl.model.regression_bio_perceptron import RegressionBioPerceptron
 import argparse
 import yaml
 import json
@@ -28,6 +25,7 @@ from tools_dl.tools import (
 )
 import time
 from bio_dl.gene_mapping import uniq_nonempty_uniprot_mapping_header
+from bio_dl.gene import Gene
 
 import argparse
 
@@ -43,6 +41,14 @@ parser.add_argument('--write_norm', type=boolean_string, default=False)
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--cross_val_genes', type=str, default='')
 opt = parser.parse_args()
+default_perceptron_config_path = 'config/gene_expression/train_linear.yaml'
+with open(default_perceptron_config_path, 'r') as f:
+    default_perceptron_config = yaml.load(f, Loader=yaml.SafeLoader)
+    
+model_config = default_perceptron_config['model']
+model2use = model_config['model2use'][0]
+perceptrin_config = model_config[model2use]
+    
 epoch = opt.epoch
 net_dir_p = opt.net_dir
 config_p = find_files(net_dir_p, '_config', abs_p = True)[0]
@@ -54,11 +60,14 @@ batch_size = opt.batch_size
 cross_val_genes = opt.cross_val_genes
 
 dataset_config = DistGeneDataLoader.opt_from_config(data_config_p)
-dataset = DistGeneDataLoader(
+
+dataset = GeneLinearDataLoader(
     dataset_config,
     net_config_path=config_p,
     use_net_experiments=True,
-    config_dict=dataset_config
+    use_net_databases=False,
+    config_dict=dataset_config,
+    crop_db_alph=False
 )
 if len(cross_val_genes):
     with open(cross_val_genes, 'r') as f:
@@ -67,12 +76,13 @@ if len(cross_val_genes):
     print('USING CROSS VAL GENES, ONLY VAL MODE')
     dataset.genes2train = []
     dataset.genes2val = val_config_genes
-    debug(val_config_genes)
+    debug(val_config_genes) 
     dataset._valexps2indxs = []
     dataset._exps2indxs = []
     dataset._warmupExps()
     only_val = True
-train_data_loader, val_data_loader = DistGeneDataLoader.createDistLoader(
+    
+train_data_loader, val_data_loader = GeneLinearDataLoader.createDistLoader(
     data_config_p, 
     rank=0, 
     batch_size=batch_size, 
@@ -80,12 +90,13 @@ train_data_loader, val_data_loader = DistGeneDataLoader.createDistLoader(
     num_workers=8,
     dataset=dataset,
     net_config_path=config_p,
-    use_net_experiments=True,
-    inference_mode=True
+    use_net_experiments=False,
+    use_net_databases=True,
+    crop_db_alph=False,
+    is_inference=True
 )
 
 with open(data_config_p, 'r') as f:
-    # data_config_ = yaml.load(f)
     data_config_ = yaml.load(f, Loader=yaml.SafeLoader)
     data_config = data_config_['data']
 
@@ -94,42 +105,39 @@ params_path = os.path.split(config_p)[0]
 with open(config_p, 'r') as f:
     config = json.load(f)
 net_name = config['net_name']
-width_factor = config['width_factor']
-num_layers = config['num_layers']
 out_dir = os.path.join(params_path, 'out', run_start)
 ensure_folder(out_dir)
-debug(config['model_name'])
-net_num_channels = len(uniq_nonempty_uniprot_mapping_header()) + 4
-if 'V2' not in config['model_name']:
-    net = RegressionResNet2d34(
-        num_channels=net_num_channels, 
-        channels_width_modifier=width_factor
-    )
-else:
-    if num_layers == 34:
-        net = RegressionResNet2dV2_34(
-            num_channels=net_num_channels, 
-            channels_width_modifier=width_factor
-        )
-    elif num_layers == 50:
-        net = RegressionResNet2dV2_50(
-            num_channels=net_num_channels, 
-            channels_width_modifier=width_factor
-        )
+
+# net_num_channels = len(uniq_nonempty_uniprot_mapping_header()) + 4
+databases = uniq_nonempty_uniprot_mapping_header()
+annotations_len = len(databases) * dataset.max_var_layer
+
+network = RegressionBioPerceptron(
+    input_annotations_len=annotations_len, 
+    input_type_len=len(dataset.proteinMeasurementsAlphabet), 
+    # input_type_len=21, 
+    input_gene_seq_bow_len=len(Gene.proteinAminoAcidsAlphabet()),
+    input_features_hidden_size=perceptrin_config['input_features_hidden_size'],
+    hidden_size=perceptrin_config['hidden_size'],
+    annotation_dropout=perceptrin_config['annotations_dropout'],
+    hidden_dropout=perceptrin_config['hidden_dropout']
+)
+
 model = TorchModel(
-    os.path.split(params_path)[0], 
-    net_name, 
-    epoch,
-    model=net,
+    params_dir=os.path.split(params_path)[0], 
+    net_name=net_name,
+    epoch=epoch,
+    model=network,
     load=True
 )
+
 model._model.eval()
 ctx = isGPU(isdebug)
 if 'gpu' in ctx:
     model._model = model._model.cuda()
 print('config', config_p)
 rna_alph = config['rna_exps_alphabet']
-inference_shape = config['inference_shape']
+# inference_shape = config['inference_shape']
 max_label = float(config['denorm_max_label'])
 prot_alph = config['protein_exps_alphabet']
 databases_names_alph = config['databases']
@@ -176,11 +184,30 @@ if only_val:
 for data_loader_i, data_loader in enumerate(dataloaders2process):
     batch_passed = 0
     batch_total_count = len(data_loader)
-    for batch, prot_vals, uids, rna_ids, prot_ids in data_loader:
+    # for batch, prot_vals, uids, rna_ids, prot_ids in data_loader:
+    for (
+        annotations,
+        type_one_hot, 
+        norm_rna_val, 
+        gene_seq_bow, 
+        uids, 
+        rna_ids, 
+        prot_ids, 
+        label
+    )in data_loader:
         batch_inference = time.time()
         if 'gpu' in ctx:
-            batch = batch.cuda()
-        out = model(batch)
+            annotations = annotations.cuda()
+            type_one_hot = type_one_hot.cuda()
+            norm_rna_val = norm_rna_val.cuda()
+            gene_seq_bow = gene_seq_bow.cuda()
+            label = label.cuda()
+        out = model(
+            annotations, 
+            type_one_hot, 
+            norm_rna_val, 
+            gene_seq_bow
+        )
         batch_inference_ts.append(
             time.time() - batch_inference
         )

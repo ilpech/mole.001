@@ -8,11 +8,11 @@ data:
     # tissue29: True
     # nci60: True
     # ===== TISSUE29
-    tissue29: True
-    nci60: False
+    # tissue29: True
+    # nci60: False
     # ===== NCI60
-    # tissue29: False
-    # nci60: True
+    tissue29: False
+    nci60: True
   # if maxGenesFromDataset == 0 load full dataset
   maxGenesFromDataset: 0
   # tissue29_rna: ./bio_dl/testdata/tissue29.1k_rna.tsv
@@ -106,11 +106,11 @@ model:
     wideResNet:
       num_layers: 34
       width_factor: 3
-    ResNetV2:
-      num_layers: 34
-      width_factor: 1
     # ResNetV2:
-    #   num_layers: 50
+    #   num_layers: 34
     #   width_factor: 1
+    ResNetV2:
+      num_layers: 50
+      width_factor: 1
 
   

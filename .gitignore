@@ -1,0 +1,111 @@
+# *.gz
+*.tgz
+*tar.gz
+#*.jpg
+#*.png
+#*.json
+*.params
+*ubyte
+*pdf
+*.gv
+*.DS_Store
+*.mp4
+
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# jupyter
+.ipynb_checkpoints
+
+# cmake build directory and binary directories
+build/*
+bin*/*
+
+# daemon's db
+tasks.db
+
+# Python
+**/__pycache__/*
+*.pyc
+*.pyo
+
+#for yaml files with data
+*.yml
+
+# Django
+**/admin/
+**/django_tables2/
+**/migrations/
+**/kml_folder/
+*.installed.cfg
+**/static/
+
+#ML
+
+**/data
+**/out
+**/bioviewer_out
+**/out_two_pc
+**/out_open3d
+**/trained
+**/api_out
+**/output
+**/cash
+**/test
+
+#other
+*.swp
+**/.idea/
+**/.vscode/
+
+#machine_learning.pointcloud (for csv)
+**/measurement_out
+
+**/build
+
+human_ids_mapping.tab
+human_ids_mapping_2023_08_30.tab
+engs2uniprot_human.txt
+engs2uniprot_human_2023_08_30.txt
+
+**/build
+
+# torchserve archives
+*.mar
+
+# mole access token 
+token.py
+
+# torchserve logs
+logs

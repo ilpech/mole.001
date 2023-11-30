@@ -106,11 +106,11 @@ model:
     wideResNet:
       num_layers: 34
       width_factor: 3
-    ResNetV2:
-      num_layers: 34
-      width_factor: 1
     # ResNetV2:
-    #   num_layers: 50
+    #   num_layers: 34
     #   width_factor: 1
+    ResNetV2:
+      num_layers: 50
+      width_factor: 1
 
   
