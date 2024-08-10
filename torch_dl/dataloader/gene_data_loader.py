@@ -27,7 +27,10 @@ import csv
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
-from torch_dl.dataloader.gene_batch_data_loader import BatchIterDistGeneDataLoader
+from torch_dl.dataloader.gene_batch_data_loader import (
+    BatchIterDistGeneDataLoader,
+    InferenceBatchGeneDataLoader
+)
 
 from typing import List
 import time
@@ -48,18 +51,29 @@ class DistGeneDataLoader(Dataset):
         self, 
         config_path, 
         net_config_path=None,
-        use_net_experiments=True
+        use_net_experiments=True,
+        use_net_databases=True,
+        config_dict=None,
+        crop_db_alph=True
     ):
         self.creation_time = curDateTime()
         self.config_path = config_path
         if len(self.config_path) == 0:
            raise Exception('provide path to .yaml train config with data branch') 
+        if config_dict:
+            print('GeneDataLoader::using config from param')
+            self.config = config_dict
+        else:    
+            if len(self.config_path) == 0:
+                raise Exception('GeneDataLoader::provide path to .yaml train config with data branch') 
+            self.config = DistGeneDataLoader.opt_from_config(self.config_path)
         self.net_config_path = net_config_path
         self.use_net_experiments = use_net_experiments
-        self.config = DistGeneDataLoader.opt_from_config(self.config_path)
+        self.use_net_databases = use_net_databases
         self.config_data = self.config['data']
         self.config_train = self.config['train']
         self.cash_path = self.config_data['cashPath']
+        self.apiUniprotOutDir = self.config_data['apiUniprotOutDir']
         self.gene2sample_cash_path = None
         if self.cash_path != 'False':
             self.gene2sample_cash_path = os.path.join(
@@ -85,9 +99,12 @@ class DistGeneDataLoader(Dataset):
         self._valexps2indxs: List = []
         self.genes_mapping_databases = uniprot_mapping_header()
         self.databases_alphs = {}
+        self.most_common_databases_alphs = None # added for linear models
         self.max_len_db_alph = self.max_var_layer * len(Gene.proteinAminoAcidsAlphabet())
+        # TODO move under flag
         print('reading mapping', self.gene_mapping_path)
         self.mapping = mapping2dict(self.gene_mapping_path)
+        self.crop_db_alph = crop_db_alph 
         self.max_label = None
         self.net_config = None
         self.net_name = None
@@ -150,14 +167,14 @@ class DistGeneDataLoader(Dataset):
         if self.rnaMeasurementsAlphabet != self.proteinMeasurementsAlphabet:
             raise Exception('DistGeneDataLoader::rnaMeasurementsAlphabet = self.proteinMeasurementsAlphabet') 
         self._warmupExps()
-        debug(len(self._valexps2indxs))
-        debug(len(self._exps2indxs))
-        debug(self.rnaMeasurementsAlphabet)
-        debug(len(self.rnaMeasurementsAlphabet))
-        debug(self.proteinMeasurementsAlphabet)
-        debug(len(self.proteinMeasurementsAlphabet))
-        debug(self.maxProteinMeasurementInData())
-        debug(self.maxRNAMeasurementInData())
+        # debug(len(self._valexps2indxs))
+        # debug(len(self._exps2indxs))
+        # debug(self.rnaMeasurementsAlphabet)
+        # debug(len(self.rnaMeasurementsAlphabet))
+        # debug(self.proteinMeasurementsAlphabet)
+        # debug(len(self.proteinMeasurementsAlphabet))
+        # debug(self.maxProteinMeasurementInData())
+        # debug(self.maxRNAMeasurementInData())
         
     @staticmethod
     def createDistLoader(
@@ -168,7 +185,8 @@ class DistGeneDataLoader(Dataset):
         num_workers=os.cpu_count()-1,
         dataset=None, # already used DistGeneDataLoader for fast changing of batch size
         net_config_path=None, # to fast load db mappings
-        use_net_experiments=False
+        use_net_experiments=False,
+        inference_mode=False
     ):
         """
         Creating dataset for training and validation
@@ -182,10 +200,18 @@ class DistGeneDataLoader(Dataset):
                 net_config_path,
                 use_net_experiments
             )
-        train_dataset = BatchIterDistGeneDataLoader(
-            dataset, 
-            'train'
-        )
+        if inference_mode:
+            train_dataset = InferenceBatchGeneDataLoader(
+                dataset, 
+                'train'
+            )
+            print('inference (train) dataloader created for rank {}'.format(rank))
+        else:
+            train_dataset = BatchIterDistGeneDataLoader(
+                dataset, 
+                'train'
+            )
+            print('train dataloader created for rank {}'.format(rank))
         # multi GPU sampler
         train_sampler = DistributedSampler(
             train_dataset, 
@@ -201,11 +227,18 @@ class DistGeneDataLoader(Dataset):
             sampler=train_sampler,
             # collate_fn=collate_fn 
         )
-        print('train dataloader created for rank {}'.format(rank))
-        val_dataset = BatchIterDistGeneDataLoader(
-            dataset,
-            'val'
-        )
+        if inference_mode:
+            val_dataset = InferenceBatchGeneDataLoader(
+                dataset,
+                'val'
+            )
+            print('inference (val) dataloader created for rank {}'.format(rank))
+        else:
+            val_dataset = BatchIterDistGeneDataLoader(
+                dataset,
+                'val'
+            )
+            print('val dataloader created for rank {}'.format(rank))
         # multi GPU sampler
         val_sampler = DistributedSampler(
             val_dataset, 
@@ -221,7 +254,6 @@ class DistGeneDataLoader(Dataset):
             sampler=val_sampler,
             # collate_fn=collate_fn 
         )
-        print('val dataloader created for rank {}'.format(rank))
         t2 = time.time()
         print('time passed {:.3f}'.format(t2-t1))
         return train_dataloader, val_dataloader
@@ -242,6 +274,8 @@ class DistGeneDataLoader(Dataset):
         # debug(rna_exps_alphabet)
         for gene_uid, gene in self.genes().items():
             to_train = False
+            if gene_uid not in self.genes2train and gene_uid not in self.genes2val: 
+                continue
             if gene_uid in self.genes2train:
                 to_train = True
             for rna_exp, value in gene.rna_measurements.items():
@@ -298,7 +332,8 @@ class DistGeneDataLoader(Dataset):
             print('error reading genes2val from config {}'.format(path2model_config))
         self.genes2train = [x for x, _ in self.genes().items() if x not in genes2val]
         self.genes2val = [x for x, _ in self.genes().items() if x in genes2val]
-        self.max_label = cfg['denorm_max_label']
+        # self.max_label = cfg['denorm_max_label']
+        self.max_label = 1.0
         print('genes splitted from file {} \n{} in val \n{} in train'.format(
             path2model_config, 
             len(self.genes2val), 
@@ -570,7 +605,7 @@ class DistGeneDataLoader(Dataset):
         # 3-rd channel: filled with normed RNA experiment abundance
         batch[2].fill(norm_rna_value)
         # 4-nd channel: filled by gene aminoacids seq in onehot representation
-        gene_seq_onehot = gene.apiSeqOneHot()
+        gene_seq_onehot = gene.apiSeqOneHot(self.apiUniprotOutDir)
         if gene_seq_onehot is not None and len(gene_seq_onehot):
             onehot_rows = gene_seq_onehot.shape[0]
             if onehot_rows > variable_length_layer_size:
@@ -638,10 +673,11 @@ class DistGeneDataLoader(Dataset):
         """
         print(f'filling database alphabets with max {max_len_alph}...')
         cash_file = None
-        if cash_dir is not None:
+        if cash_dir is not None and self.use_net_databases:
             db_cash = find_files(cash_dir, '_databases_', abs_p=True)
             if len(db_cash):
                 cash_file = db_cash[0]
+                
         if cash_file:
             with open(cash_file, 'r') as f:
                 cash_data = json.load(f)
@@ -659,9 +695,10 @@ class DistGeneDataLoader(Dataset):
                     if data not in uniq_data:
                         uniq_data.append(data)
             print('db {} filled with {} ids'.format(db_name, len(uniq_data)))
-            if len(uniq_data) > max_len_alph:
-                print('last ids deleted')
-                uniq_data = uniq_data[:max_len_alph]
+            if self.crop_db_alph:
+                if len(uniq_data) > max_len_alph:
+                    print('last ids deleted')
+                    uniq_data = uniq_data[:max_len_alph]
             self.databases_alphs[db_name] = uniq_data
         return self.databases_alphs 
         
@@ -1063,19 +1100,26 @@ if __name__ == '__main__':
             if sample is None:
                 # print('{} is none'.format(gene_id))
                 continue
-            viz = baseloader.viz_sample(
-                gene_id,
-                sample,
-                '/home/ilpech/datasets/tests',
-                layout=(
-                    'protein_id',
-                    'rna_id',
-                    'rna_value',
-                    'aminoacids',
-                    'annotations',
-                ),
-                data2viz=15
-            )
+            debug(gene_id)
+            debug(np.sum(sample[3]), prefix='amino_sequences::')
+            debug(np.sum(sample[4]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[0]}::')
+            debug(np.sum(sample[5]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[1]}::')
+            debug(np.sum(sample[6]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[2]}::')
+            debug(np.sum(sample[7]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[3]}::')
+            debug(np.sum(sample[8]), prefix=f'{uniq_nonempty_uniprot_mapping_header()[4]}::')
+            # viz = baseloader.viz_sample(
+            #     gene_id,
+            #     sample,
+            #     '/home/ilpech/datasets/tests',
+            #     layout=(
+            #         'protein_id',
+            #         'rna_id',
+            #         'rna_value',
+            #         'aminoacids',
+            #         'annotations',
+            #     ),
+            #     data2viz=15
+            # )
             # if viz is None:
             #     print('{} viz is none'.format(gene_id))
             break

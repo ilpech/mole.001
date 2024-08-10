@@ -2,17 +2,18 @@
 data:
   # cashPath: bio_dl/cash/dataloader_23
   cashPath: /home/ilpech/repositories/machine_learning/bio_dl/cash/dataloader_23
+  # cashPath: /home/gerzog/repositories/machine_learning/bio_dl/cash/dataloader_23
   apiUniprotOutDir: /home/gerzog/repositories/machine_learning/bio_dl/testdata/api_out
   datasets2use:
     # ===== BOTH
     # tissue29: True
     # nci60: True
     # ===== TISSUE29
-    tissue29: True
-    nci60: False
+    # tissue29: True
+    # nci60: False
     # ===== NCI60
-    # tissue29: False
-    # nci60: True
+    tissue29: False
+    nci60: True
   # if maxGenesFromDataset == 0 load full dataset
   maxGenesFromDataset: 0
   # tissue29_rna: ./bio_dl/testdata/tissue29.1k_rna.tsv
@@ -25,27 +26,23 @@ data:
   nci60_prot: ./bio_dl/testdata/nci60_prot.tsv
   geneMapping: /home/gerzog/repositories/machine_learning/bio_dl/testdata/human_ids_mapping_2023_08_30.tab
   engs2uniprot_file: /home/gerzog/repositories/machine_learning/bio_dl/testdata/mapping_out/engs2uniprot_human_2023_08_30.txt
-  # splitGeneFromModelConfig: ./bio_dl/testdata/prot_abundance_regressor.full_tissue29_.2_val_config_NONORM.json
-  # splitGeneFromModelConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
-  splitGeneFromModelConfig: False
-  ifSplitPercentToTrain: 0.72
-  # ifSplitPercentToTrain: False
+  splitGeneFromModelConfig: ./bio_dl/testdata/prot_abundance_regressor.full_tissue29_.2_val_config_NONORM.json
+  # splitGeneFromModelConfig: False
+  # ifSplitPercentToTrain: 0.72
+  ifSplitPercentToTrain: False
   useZeroProt: False
   useNonZeroProt: True
 train:
   params_dir: ./trained
-  max_var_layer: 2048
+  max_var_layer: 1024
   gpus2use: 1
   each_train_has_own_dataset: False
-  net_name: rna2protein_tissue29.ResNet34V2.017
-  # net_name: rna2protein_tissue29.ResNet34V2.016_9ch_test - very good
-  # net_name: rna2protein_nci60.ResNet34V2.013_old9ch
+  # net_name: rna2protein_tissue20.ResNet34V2.015
+  net_name: rna2protein_nci60.BioPerceptron.001
   finetune_net_name: rna2protein_nci60.ResNet34V2.013_old9ch
-  # finetune_net_name: rna2protein_tissue29.ResNet34V2.010
-  finetune_params_dir: trained
-  # finetune_params_dir: /home/ilpech/repositories/machine_learning/trained
+  finetune_params_dir: /home/ilpech/repositories/mole.001/trained
   use_finetune_experiments: False
-  use_finetune_databases: True
+  use_finetune_databases: False
   epoch_start_from: 0
   epochs: 900
   log_interval: 3
@@ -53,6 +50,7 @@ train:
   metric_flush_interval: 50
   wd: 0.0001
   momentum: 0.9
+
   optimizer: sgd
   lr:
     mode: [
@@ -82,17 +80,28 @@ train:
       # resuming normal operation after lr has been reduced
       cooldown: 2
       min_lr: 0.000001 
+    # cosineWarmup:
+    #   max_lr: 0.0003
+    #   min_lr: 0.0000001 
+    #   warmup_steps: 125
+    #   first_cycle_steps: 250
+    #   step_each_batch: 1
+    #   cycle_mult: 1.2
+    #   # decrease max learning rate by cycle
+    #   gamma: 0.99
     cosineWarmup:
-      max_lr: 0.0003
+      max_lr: 0.003
       min_lr: 0.0000001 
       warmup_steps: 250
       first_cycle_steps: 500
       step_each_batch: 1
-      cycle_mult: 1.5
+      cycle_mult: 1.0
       # decrease max learning rate by cycle
+      # gamma: 0.8
       gamma: 0.95
+      
   batch_size:
-    0: 150
+    0: 64
   augm:
     isEnabled: True
     epoch_p:
@@ -101,7 +110,8 @@ train:
 model:
     model2use: [
       # wideResNet,
-      ResNetV2
+      # ResNetV2,
+      BioPerceptron
     ]
     wideResNet:
       num_layers: 34
@@ -112,5 +122,12 @@ model:
     # ResNetV2:
     #   num_layers: 50
     #   width_factor: 1
+    BioPerceptron:
+      input_features_hidden_size: 1024 
+      hidden_size: 1024
+      annotations_dropout: 0.25
+      hidden_dropout: 0.5
+
+
 
   

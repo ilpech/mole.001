@@ -1,4 +1,4 @@
-#usage: python3 torch_dl/train/train_gene_regression.py --config config/gene_expression/train.yaml --isdebug False
+#usage: python3 torch_dl/train/train_linear_gene_regression.py --config config/gene_expression/train.yaml --isdebug False
 
 import os
 import sys
@@ -8,6 +8,7 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
 from torch_dl.dataloader.gene_data_loader import DistGeneDataLoader
+from torch_dl.dataloader.gene_batch_linear_data_loader import GeneLinearDataLoader
 import argparse
 import yaml
 import json
@@ -18,6 +19,7 @@ from torch_dl.model.regression_model import (
     RegressionResNet2dV2_34,
     RegressionResNet2dV2_50
 )
+from torch_dl.model.regression_bio_perceptron import RegressionBioPerceptron
 from torch_dl.model.model import TorchModel
 from torch_dl.tools.tools_torch import (
     dist_setup, 
@@ -45,10 +47,12 @@ from torch_dl.scheduler.cosine_warmup import CosineAnnealingWarmupRestarts
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import warnings
-from typing import Dict, List
+
+from torch_dl.train.train_gene_regression import DistGeneExpressionTrainer
+
 torch.cuda.empty_cache()
 
-class DistGeneExpressionTrainer:
+class DistGeneLinearExpressionTrainer:
     '''
     Gene protein abundance regression predictor
     trainer with multi-GPU access 
@@ -56,8 +60,8 @@ class DistGeneExpressionTrainer:
     def __init__(
         self, 
         config_path, 
-        isdebug, 
-        config_dict:Dict=None,
+        isdebug,
+        config_dict=None,
         force_run=True
     ):
         self.isdebug = isdebug
@@ -66,6 +70,8 @@ class DistGeneExpressionTrainer:
             self.config = config_dict
         else:
             self.config = DistGeneExpressionTrainer.opt_from_config(config_path)
+        # with open(config_path) as f:
+        #     self.config = yaml.load(f, yaml.FullLoader)
         self.start_time = curDateTime()
         self.config_path = config_path
         self.data_settings = self.config['data']
@@ -75,6 +81,7 @@ class DistGeneExpressionTrainer:
         self.finetune_params_dir = self.train_settings['finetune_params_dir']
         self.epoch_start_from = self.train_settings['epoch_start_from']
         self.use_finetune_experiments = self.train_settings['use_finetune_experiments']
+        self.use_finetune_databases = self.train_settings['use_finetune_databases']
         self.params_dir = self.train_settings['params_dir']
         self.params_path = os.path.join(self.params_dir, self.net_name)
         if force_run:
@@ -87,6 +94,7 @@ class DistGeneExpressionTrainer:
                 warnings.filterwarnings('ignore')
                 ensure_folder(self.params_path)
                 cp_r(self.config_path, self.params_path)
+
         self.log_path = '{}/{}_log.txt'.format(self.params_path, self.net_name)
         self.gpus2use = self.train_settings['gpus2use']
         self.logger = TrainLogger(self.log_path, '[MAIN_GPUs::{}]'.format(self.gpus2use))
@@ -113,6 +121,7 @@ class DistGeneExpressionTrainer:
         self.augm_settings = self.train_settings['augm']
         self.with_augm = self.augm_settings['isEnabled']
         self.epochs = self.train_settings['epochs']
+
         self.log_interval = self.train_settings['log_interval']
         self.metric_flush_interval = self.train_settings['metric_flush_interval']
         self.wd = self.train_settings['wd']
@@ -126,8 +135,19 @@ class DistGeneExpressionTrainer:
                 'check config, should be only one selected model'
             )
         self.model2use = self.model2use[0]
-        self.width_factor = None
-        self.num_layers = None
+        # self.width_factor = None
+        # self.num_layers = None
+        
+        self.hidden_size = None
+        self.annotations_dropout = None
+        self.hidden_dropout = None
+        
+        if self.model2use == 'BioPerceptron':
+            self.input_features_hidden_size = int(self.model_settings[self.model2use]['input_features_hidden_size'])
+            self.hidden_size = int(self.model_settings[self.model2use]['hidden_size'])
+            self.annotations_dropout = float(self.model_settings[self.model2use]['annotations_dropout'])
+            self.hidden_dropout = float(self.model_settings[self.model2use]['hidden_dropout'])
+        
         drop_rate = 0.0
         self.dist_cpu_backend = dist.Backend.GLOO
         self.dist_gpu_backend = dist.Backend.NCCL
@@ -140,17 +160,24 @@ class DistGeneExpressionTrainer:
                 )
             )
             self.gpus2use = self.avail_gpus
-        self.isdebug_cpu = False
         if torch.cuda.is_available():
             self.ctx = 'gpu'
             self.logger.print('successfully created gpu array -> using gpu')
             self.dist_backend = self.dist_gpu_backend
         else:
             self.ctx = 'cpu'
-            self.isdebug = True
-            self.logger.print('using cpu->enable debug mode')
+            if self.isdebug:
+                self.logger.print('debug mode -> using cpu')
+            else:
+                self.logger.print('cannot create gpu array -> using cpu')
+                self.logger.print(
+                    'Error! dist train can not work without gpu, use usual train instead'
+                )
+                exit()
+        
         self.current_lr = None
         self.current_batch_size = None
+        
         if force_run:
             if self.gpus2use == 1 or self.isdebug:
                 self.train_loop()
@@ -158,14 +185,7 @@ class DistGeneExpressionTrainer:
             elif dist.is_available() and self.gpus2use > 0:
                 print(f'cuda available -> mp spawn on {self.gpus2use} GPUs')
                 mp.spawn(self.train_loop, nprocs=self.gpus2use)
-
-    @staticmethod
-    def opt_from_config(config_path):
-        with open(config_path) as f:
-            config = yaml.load(f, yaml.FullLoader)
-            print(f'DistGeneExpressionTrainer::from config {config_path}')
-        return config
-
+        
     def create_model(self, num_channels):
         '''
         Create model or load epoch if self.epoch_start_from is set 
@@ -238,12 +258,12 @@ class DistGeneExpressionTrainer:
             test_mode=self.isdebug
         )
         
-    # def train_loop(self, gpu_id=0):
     def train_loop(
         self, 
-        gpu_id=0,
+        gpu_id=0, 
         dataset=None
     ):
+        
         '''
         Multi-GPU train loop, 
         each loop function is created for
@@ -267,7 +287,8 @@ class DistGeneExpressionTrainer:
             'train'
         ]['each_train_has_own_dataset']
         self.current_batch_size = self.batch_sizes[0]      
-        train_loader, val_loader = DistGeneDataLoader.createDistLoader(
+        # train_loader, val_loader = DistGeneDataLoader.createDistLoader(
+        train_loader, val_loader = GeneLinearDataLoader.createDistLoader(
             self.config_path,
             gpu_id,
             self.current_batch_size,
@@ -276,25 +297,70 @@ class DistGeneExpressionTrainer:
             # num_workers=os.cpu_count()-1,
             num_workers=self.gpus2use*2,
             net_config_path=net_config_dir,
-            use_net_experiments=self.use_finetune_experiments
+            use_net_databases=self.use_finetune_databases,
+            crop_db_alph=False
         )
-        dataset = train_loader.dataset.baseloader
-        self.max_label = dataset.max_label
+        data_loader = train_loader.dataset.baseloader
+        self.max_label = data_loader.max_label
         print(f'dist dataloader created for gpu {gpu_id}')
-        inference_shape = (
-            1, 
-            4+len(databases), 
-            dataset.max_var_layer, 
-            len(Gene.proteinAminoAcidsAlphabet())
+        
+        annotations_len = len(databases) * data_loader.max_var_layer
+        # inference_shape = (
+        #     1, 
+        #     4+len(databases), 
+        #     data_loader.max_var_layer, 
+        #     len(Gene.proteinAminoAcidsAlphabet())
+        # )
+        logger.print('creating linear regression model...'.format(gpu_id))
+        # logger.print('creating resnset regression model...'.format(gpu_id))
+        # model: TorchModel = self.create_model(
+        #     num_channels=10
+        # )
+        
+        # inspect_model(
+        #     model.model(),
+        #     torch.zeros(size=inference_shape)
+        # )
+        
+        network = RegressionBioPerceptron(
+            input_annotations_len=annotations_len, 
+            input_type_len=len(data_loader.proteinMeasurementsAlphabet), 
+            input_gene_seq_bow_len=len(Gene.proteinAminoAcidsAlphabet()),
+            input_features_hidden_size=self.input_features_hidden_size,
+            hidden_size=self.hidden_size,
+            annotation_dropout=self.annotations_dropout,
+            hidden_dropout=self.hidden_dropout
         )
-        logger.print('creating resnset regression model...'.format(gpu_id))
-        model: TorchModel = self.create_model(
-            num_channels=len(uniq_nonempty_uniprot_mapping_header()) + 4
+        
+        if self.epoch_start_from > 0:
+            self.logger.print('finetune from {}!'.format(self.epoch_start_from))
+            model = TorchModel(
+                new_params_dir=self.params_dir, 
+                new_net_name=self.net_name,
+                net_name=self.finetune_net_name,
+                params_dir=self.finetune_params_dir,
+                model=network,
+                load=True,
+                epoch=self.epoch_start_from,
+                test_mode=self.isdebug
+            )
+        model = TorchModel(
+            params_dir=self.params_dir, 
+            net_name=self.net_name,
+            model=network,
+            test_mode=self.isdebug
         )
+        
         inspect_model(
             model.model(),
-            torch.zeros(size=inference_shape)
+            (
+                torch.zeros(1, annotations_len),
+                torch.zeros(1, len(data_loader.proteinMeasurementsAlphabet)),
+                torch.zeros(1, 1),
+                torch.zeros(1, len(Gene.proteinAminoAcidsAlphabet()))
+            )
         )
+        
         if dist.is_available() and gpu_id >= 0:
             model._model.cuda(gpu_id)
             # wrap the model to current gpu
@@ -307,12 +373,16 @@ class DistGeneExpressionTrainer:
           
         logger.print('train started at::{}'.format(start_time))
         if gpu_id == 0:
-            self.logger.print('{} genes2train'.format(len(dataset.genes2train)))
-            self.logger.print('{} genes2val'.format(len(dataset.genes2val)))
-            self.logger.print('{} epxs in data'.format(len(dataset)))
+            self.logger.print('{} genes2train'.format(len(data_loader.genes2train)))
+            self.logger.print('{} genes2val'.format(len(data_loader.genes2val)))
+            self.logger.print('{} epxs in data'.format(len(data_loader)))
         
-        data_cnt = len(dataset)
+        max_eps = data_loader.maxProteinMeasurementsInData()
+        
+        data_cnt = len(data_loader)
         L = torch.nn.MSELoss()
+        # L = torch.nn.SmoothL1Loss(beta=0.5)
+        # L = torch.nn.HuberLoss(delta=0.5)
         scheduler = None
         if self.lr_mode == 'byhand':
             lr_dict = self.lr_settings['byHand']
@@ -353,31 +423,31 @@ class DistGeneExpressionTrainer:
         num_batch = roundUp(data_cnt/self.current_batch_size)
         best_epoch = 0
         max_val_p2n = None
-        assert len(dataset.databases_alphs)
+        assert len(data_loader.databases_alphs)
         with open(self.databases_alphs_path, 'w') as f:
-            json.dump(dataset.databases_alphs, f, indent=4)
+            json.dump(data_loader.databases_alphs, f, indent=4)
             print('databases info written', self.databases_alphs_path)
-        if gpu_id == 0:
-            self.logger.print('batch shape::{}'.format(inference_shape))
-        rna_exps_alphabet = dataset.rnaMeasurementsAlphabet
+        # if gpu_id == 0:
+        #     self.logger.print('batch shape::{}'.format(inference_shape))
+        rna_exps_alphabet = data_loader.rnaMeasurementsAlphabet
         if self.max_label is None:
             self.max_label = 1.0
             # self.max_label = norm_shifted_log(
-            #     dataset.maxProteinMeasurementInData()
+            #     data_loader.maxProteinMeasurementInData()
             # )
         max_label = self.max_label
-        protein_exps_alphabet = dataset.proteinMeasurementsAlphabet
+        protein_exps_alphabet = data_loader.proteinMeasurementsAlphabet
         config_data = {
             'net_name': self.net_name,
             'model_name': self.model2use,
-            'num_layers': self.num_layers,
-            'width_factor': self.width_factor,
-            'inference_shape': inference_shape,
+            # 'num_layers': self.num_layers,
+            # 'width_factor': self.width_factor,
+            # 'inference_shape': inference_shape,
             'denorm_max_label': float(max_label),
             'rna_exps_alphabet': rna_exps_alphabet,
             'protein_exps_alphabet': protein_exps_alphabet,
             'databases': databases,
-            'genes2val': dataset.genes2val
+            'genes2val': data_loader.genes2val
         }
         if gpu_id == 0:
             with open(self.model_config_path, 'w') as f:
@@ -413,7 +483,7 @@ class DistGeneExpressionTrainer:
         scheduler_step = 0
         for i in range(self.epochs):
             model.model().train()  
-            dataset.shuffleTrain()
+            data_loader.shuffleTrain()
             epoch = i
             epoch_tic = time.time()
             if self.lr_mode == 'byHand':
@@ -433,32 +503,49 @@ class DistGeneExpressionTrainer:
                 self.logger.print('Current batch size is:{}'.format(
                     self.current_batch_size)
                 )
-                train_loader, _ = DistGeneDataLoader.createDistLoader(
+                # train_loader, _ = DistGeneDataLoader.createDistLoader(
+                train_loader, _ = GeneLinearDataLoader.createDistLoader(
                     self.config_path,
                     gpu_id,
                     self.current_batch_size,
                     self.gpus2use,
-                    dataset=dataset,
                     # num_workers=os.cpu_count()-1,
                     num_workers=self.gpus2use*2,
                     net_config_path=os.path.join(
                         self.finetune_params_dir, 
                         self.finetune_net_name
-                    )
+                    ),
+                    use_net_databases=self.use_finetune_databases,
+                    crop_db_alph=False
                 )
                 objs2train = len(train_loader)
             train_tic = time.time()
             train_loss = 0
             passed = 0 # train batches passed
             valpassed = 0 # val batches passed
-            for data, labels in train_loader:
-                if data is None or labels is None:
+            # for data, labels in train_loader:
+            for annotations, types_one_hot, norm_rna_vals, gene_seq_bow, labels in train_loader:
+                if norm_rna_vals is None or labels is None:
                     continue
-                labels_gpu, data_gpu = (
-                    labels.unsqueeze(1).float().cuda(gpu_id),
-                    data.float().cuda(gpu_id)
+                # labels_gpu, data_gpu = (
+                #     labels.unsqueeze(1).float().cuda(gpu_id),
+                #     data.float().cuda(gpu_id)
+                # )
+                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu, labels_gpu = (
+                    annotations.float().cuda(gpu_id),
+                    types_one_hot.float().cuda(gpu_id),
+                    norm_rna_vals.float().cuda(gpu_id),
+                    gene_seq_bow.float().cuda(gpu_id),
+                    labels.unsqueeze(1).float().cuda(gpu_id)
                 )
-                out = model(data_gpu)
+                
+                # out = model(data_gpu)
+                out = model(
+                    annotations_gpu, 
+                    types_one_hot_gpu, 
+                    norm_rna_vals_gpu, 
+                    gene_seq_bow_gpu
+                )
                 loss = L(
                     out, 
                     labels_gpu
@@ -519,18 +606,31 @@ class DistGeneExpressionTrainer:
             train_denorm_metric_rmse.reset()
             train_metric_p.reset()
             train_metric_p_n.reset()
-            del data_gpu
+            del annotations_gpu
+            del types_one_hot_gpu
+            del norm_rna_vals_gpu
             del labels_gpu
+            del gene_seq_bow_gpu
             torch.cuda.empty_cache()
             train_time = time.time() - train_tic
             #val
             model.model().eval() # turn off train mode while validation
             val_tic = time.time()
             print('\n{}::\nval started...'.format(curDateTime()))
-            for data, labels in val_loader:
-                labels_gpu, data_gpu = labels.unsqueeze(1).float().cuda(gpu_id), \
-                                data.float().cuda(gpu_id)
-                out = model(data_gpu)
+            # for data, labels in val_loader:
+            for annotations, types_one_hot, norm_rna_vals, gene_seq_bow, labels in val_loader:
+                # labels_gpu, data_gpu = labels.unsqueeze(1).float().cuda(gpu_id), \
+                #                 data.float().cuda(gpu_id)
+                annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu, labels_gpu = (
+                    annotations.float().cuda(gpu_id),
+                    types_one_hot.float().cuda(gpu_id),
+                    norm_rna_vals.float().cuda(gpu_id),
+                    gene_seq_bow.float().cuda(gpu_id),
+                    labels.unsqueeze(1).float().cuda(gpu_id)
+                )
+                # out = model(data_gpu)
+                out = model(annotations_gpu, types_one_hot_gpu, norm_rna_vals_gpu, gene_seq_bow_gpu)
+                
                 valpassed += 1
                 val_metric_mse.update(out, labels_gpu)
                 val_metric_p_n.update(out, labels_gpu)
@@ -567,7 +667,9 @@ class DistGeneExpressionTrainer:
             val_denorm_metric_rmse.reset()
             val_metric_p.reset()
             val_metric_p_n.reset()
-            del data_gpu
+            del annotations_gpu
+            del types_one_hot_gpu
+            del norm_rna_vals_gpu
             del labels_gpu
             torch.cuda.empty_cache()
             new_best_val = False
@@ -651,7 +753,8 @@ if __name__ == '__main__':
         print('add config path with --config param')
         exit()
     isdebug = str2bool(opt.isdebug)
-    trainer = DistGeneExpressionTrainer(opt.config, isdebug)
+    # trainer = DistGeneExpressionTrainer(opt.config, isdebug)
+    trainer = DistGeneLinearExpressionTrainer(opt.config, isdebug)
     # trainer.data_loader.info()
     trainer.train_loop()
     

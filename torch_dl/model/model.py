@@ -200,6 +200,9 @@ class TorchModel:
 
     def pt_dir(self):
         return os.path.join(self.net_dir(), self.net_name)
+    
+    def log_path(self):
+        return os.path.join(self.net_dir(), f'{self.net_name}_log.txt')
         
     def load(self, ctx='cpu'):
         if self._model is None:
@@ -315,7 +318,7 @@ class TorchModel:
             ext = os.path.splitext(param_file)[1]
             if '.pt' == ext:
                 for epoch in epochs2export:
-                    if '{:04d}'.format(epoch) in param_file:
+                    if '_{:04d}'.format(epoch) in param_file:
                         do_export = True
                         break
             if not do_export:
@@ -338,6 +341,66 @@ class TorchModel:
         
     def getParamsNumber(self):
         return model_params_cnt(self._model)
+
+    @staticmethod
+    def netWeights2epoch(param_file):
+        '''
+        check if file have format of exported epoch 
+        like rna2protein_nci60.ResNet34V2.005_0012.pt,
+        info after last _ should be epoch number
+        
+        return None if epoch not found
+        '''
+        fname, ext = os.path.splitext(param_file)
+        if '.pt' != ext:
+            return None
+        last_split = fname.split('_')[-1]
+        if len(last_split) == 4:
+            try:
+                epoch = int(last_split)
+                return epoch
+            except ValueError:
+                return None 
+
+    def lastEpoch(self):
+        ls_params = ls(self.pt_dir())
+        epochs = sorted([TorchModel.netWeights2epoch(x) for x in ls_params if x])
+        if not len(epochs):
+            return None
+        return epochs[-1]
+    
+    
+    def bestEpochFromLog(self, non_zero=True):
+        metric2checkstr = '|  (val)::P^2_norm_metric::'
+        with open(self.log_path(), 'r') as f:
+            log_data = f.readlines()
+        f.close()
+        epochs = []
+        p2_metric_vals = []
+        
+        for row in log_data:
+            if '[Epoch::' in row:
+                epoch = int(row[8:11])
+                epochs.append(epoch)
+            if metric2checkstr in row:
+                row.replace('\n', '')
+                val = float(row.replace(
+                    metric2checkstr, ''
+                ))
+                p2_metric_vals.append(val)
+        
+        # we cannot use 0 epoch
+        if non_zero:
+            epochs = epochs[1:]
+            p2_metric_vals = p2_metric_vals[1:]
+        if len(p2_metric_vals) == 0:
+            print(f'{self.net_name} have not best epochs...')
+            exit()
+            
+        best_val = max(p2_metric_vals)
+        best_epoch = epochs[p2_metric_vals.index(best_val)]
+        return best_val, best_epoch
+    
     
 def export_regression():
     from torch_dl.model.regression_model import RegressionResNet2d18 
@@ -350,6 +413,7 @@ def export_regression():
     )
     debug(model.get_n_params())
     # model.exportEpochs('trained/2export/', [10, 55, 80])
+
             
             
 if __name__ == '__main__':

@@ -1,0 +1,69 @@
+# use false to disable setting
+cohortsToTrain:
+  # rna2protein_tissue29.BioPerceptrone.mole_c001:
+  #   baseConfigPath: config/gene_expression/train_linear_tissue29.yaml
+  #   cohortParamsDir: trained/cohorts
+  #   crossValidation:
+  #     # stableValidationPercent: 10
+  #     stableValidationPercent: False
+  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+  #     modelsInCohort: 5
+  #   # use minEpochsToFinish = 0 to disable stop after n epoch 
+  #   minEpochsToFinish: 3
+
+  # rna2protein_nci60.BioPerceptrone.mole_c001:
+  #   baseConfigPath: config/gene_expression/train_linear_nci60.yaml
+  #   cohortParamsDir: trained/cohorts
+  #   crossValidation:
+  #     stableValidationPercent: False
+  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+  #     modelsInCohort: 5
+  #   minEpochsToFinish: 3
+
+  # input_features_hidden_size: 40 hidden_size: 80 annotations_dropout: 0.25 hidden_dropout: 0.5
+  # bs:: 64
+  # rna2protein_tissue29.BioPerceptrone.mole_c004:
+  #   baseConfigPath: config/gene_expression/train_linear_tissue29.yaml
+  #   cohortParamsDir: trained/cohorts
+  #   crossValidation:
+  #     # stableValidationPercent: 10
+  #     stableValidationPercent: False
+  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+  #     modelsInCohort: 5
+  #   # use minEpochsToFinish = 0 to disable stop after n epoch 
+  #   minEpochsToFinish: 6
+
+  # rna2protein_nci60.BioPerceptrone.mole_c004:
+  #   baseConfigPath: config/gene_expression/train_linear_nci60.yaml
+  #   cohortParamsDir: trained/cohorts
+  #   crossValidation:
+  #     stableValidationPercent: False
+  #     stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+  #     modelsInCohort: 5
+  #   minEpochsToFinish: 6
+
+  # wide version
+  # input_features_hidden_size: 1024 hidden_size: 1024 annotations_dropout: 0.25 hidden_dropout: 0.5
+  # bs:: 64
+  rna2protein_tissue29.BioPerceptrone1024.mole_c001:
+    baseConfigPath: config/gene_expression/train_linear1024_tissue29.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      # stableValidationPercent: 10
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    # use minEpochsToFinish = 0 to disable stop after n epoch 
+    minEpochsToFinish: 6
+  
+  rna2protein_nci60.BioPerceptrone1024.mole_c001:
+    baseConfigPath: config/gene_expression/train_linear1024_nci60.yaml
+    cohortParamsDir: trained/cohorts
+    crossValidation:
+      # stableValidationPercent: 10
+      stableValidationPercent: False
+      stableValidationFromConfig: bio_dl/testdata/tissue29_nci60_stable_val.json
+      modelsInCohort: 5
+    # use minEpochsToFinish = 0 to disable stop after n epoch 
+    minEpochsToFinish: 6
+  

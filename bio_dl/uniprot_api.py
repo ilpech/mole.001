@@ -40,11 +40,11 @@ def getGeneFromApi(
         print('written out', out)
     return responseBody
 
-def sequence(uniprot_id):
+def sequence(uniprot_id, outdir):
     """
     Aminoacids sequence of protein
     """
-    gene_data = getGeneFromApi(uniprot_id)
+    gene_data = getGeneFromApi(uniprot_id, outdir)
     if not len(gene_data):
         return ''
     return gene_data[0]['sequence']

@@ -8,8 +8,9 @@ isdebug: 0
 # tissue29
 metric_files: [
   # trained/rna2protein_expression_regressor.033/out/metrics.txt,
-  trained/rna2protein_tissue29.ResNet34V2.001/out/metrics.txt,
-  # trained/rna2protein_tissue29.ResNet50V2.001/out/metrics.txt
+  # trained/rna2protein_tissue29.ResNet34V2.001/out/metrics.txt,
+  # trained/rna2protein_tissue29.ResNet50V2.001/out/metrics.txt,
+  /home/ilpech/repositories/mole.001/trained/cohorts/rna2protein_tissue29.ResNet50V2.c001/rna2protein_tissue29.ResNet50V2.c001.003/out/2023.11.23.10.25.53/rna2protein_tissue29.ResNet50V2.c001.003_0002.val_metrics.txt
 ]
 select_genes: False
 changeNegativeProts2Zero: False
@@ -18,4 +19,5 @@ use_half: 0
 writeCSV: True
 drawDatasetsGT2predictedHeatmap: False
 drawDatasetsViolin: False
+only_val_by_net_config: False
 drawGenesGT2predictedViolin: False

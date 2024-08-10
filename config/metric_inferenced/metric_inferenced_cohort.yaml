@@ -1,0 +1,12 @@
+isdebug: 0
+metric_files: [
+]
+select_genes: False
+changeNegativeProts2Zero: False
+use_norm: True
+use_half: 0
+writeCSV: True
+drawDatasetsGT2predictedHeatmap: False
+drawDatasetsViolin: False
+only_val_by_net_config: False
+drawGenesGT2predictedViolin: False
